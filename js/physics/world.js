@@ -7,7 +7,8 @@ import {
   LANDING_DAMP,
   MAX_SPEED,
   PUSH_IMPULSE,
-  RAY_EXTRA,
+  RAY_FAR,
+  RESCUE_RAY,
   RIDE_HEIGHT,
   STEER_PIVOT,
   STEER_RATE,
@@ -22,6 +23,10 @@ const _forward = new THREE.Vector3();
 const _ray = new THREE.Raycaster();
 
 export function stepWorld(board, dt, input, ground) {
+  // Rays use matrixWorld. Identity until this runs, so the pad looks like a
+  // vertical XY plane and the board falls through the void.
+  ground.updateMatrixWorld(true);
+
   board.prevPos.copy(board.pos);
   board.prevQuat.copy(board.quat);
 
@@ -48,7 +53,7 @@ export function stepWorld(board, dt, input, ground) {
 
   let grounded = false;
   let lift = 0;
-  _ray.far = RIDE_HEIGHT + RAY_EXTRA;
+  _ray.far = RAY_FAR;
   for (const w of WHEEL_LOCAL) {
     _origin.set(w.x, w.y, w.z).applyQuaternion(board.quat).add(board.pos);
     _ray.set(_origin, DOWN);
@@ -57,6 +62,23 @@ export function stepWorld(board, dt, input, ground) {
     if (hit.distance <= RIDE_HEIGHT + 0.04) grounded = true;
     const need = RIDE_HEIGHT - hit.distance;
     if (need > lift) lift = need;
+  }
+
+  if (!grounded) {
+    _origin.copy(board.pos);
+    _origin.y += RESCUE_RAY;
+    _ray.far = RESCUE_RAY * 2;
+    _ray.set(_origin, DOWN);
+    const hit = _ray.intersectObject(ground, false)[0];
+    if (hit) {
+      const groundY = _origin.y - hit.distance;
+      // Only snap up if we already tunneled. Do not glue an airborne board.
+      if (board.pos.y < groundY) {
+        board.pos.y = groundY + RIDE_HEIGHT;
+        board.vel.y = 0;
+        grounded = true;
+      }
+    }
   }
 
   board.grounded = grounded;

@@ -17,6 +17,19 @@ body {
   height: 100%;
 }
 
+#hud {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px #000;
+}
+
+#hud[hidden] {
+  display: none;
+}
+
 #gate {
   position: fixed;
   inset: 0;

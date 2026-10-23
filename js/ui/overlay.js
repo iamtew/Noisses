@@ -6,7 +6,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "Gamepad connected. Press any button.",
+    body: "×  push    sticks  steer\n□ ○ △  unused for now",
   },
 };
 

@@ -12,8 +12,11 @@ Without a two-stick gamepad you get a blocking overlay. Connect a pad, press any
 
 ## Controls
 
-- **A / Cross** — push (once per press, while on the ground)
+PlayStation face buttons (standard gamepad mapping).
+
+- **× Cross** — push (once per press, while on the ground)
 - **Left + right stick X** — steer
+- **□ ○ △** — unused for now
 - Keyboard is not skating
 
 ## Deploy (GitHub Pages)

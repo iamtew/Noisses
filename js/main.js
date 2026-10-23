@@ -15,6 +15,7 @@ selfCheck();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
+const hud = document.getElementById("hud");
 const { renderer, scene, camera } = setupScene(canvas);
 const { ground, grid } = createEnvironment();
 scene.add(ground);
@@ -49,6 +50,7 @@ function tick(now) {
     if (anyButtonPressed(pad)) playing = true;
   }
   if (playing) overlay.hide();
+  hud.hidden = !playing;
 
   const input = playing ? readPlayInput(pad) : { steer: 0, push: false };
   if (playing) {

@@ -4,7 +4,11 @@ import * as THREE from "three";
 export function createEnvironment() {
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshStandardMaterial({ color: 0x6d7176, roughness: 0.95 }),
+    new THREE.MeshStandardMaterial({
+      color: 0x6d7176,
+      roughness: 0.95,
+      side: THREE.DoubleSide,
+    }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.name = "ground";

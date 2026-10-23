@@ -12,7 +12,7 @@ export const GRAVITY = 9.81;
 /** Board + skater lump mass (kg). Heavy on purpose. */
 export const BOARD_MASS = 75;
 
-/** Impulse added along the nose when A/Cross is pressed while grounded (N·s). */
+/** Impulse added along the nose when × (Cross) is pressed while grounded (N·s). */
 export const PUSH_IMPULSE = 180;
 
 /** Horizontal speed cap (m/s). ~25 km/h. */
@@ -27,8 +27,11 @@ export const LANDING_DAMP = 0.15;
 /** Target ray length from deck center down to pavement (m). */
 export const RIDE_HEIGHT = 0.11;
 
-/** Ray length past ride height so we still find the floor (m). */
-export const RAY_EXTRA = 0.25;
+/** Wheel ray length (m). Long enough to hit from spawn height. */
+export const RAY_FAR = 4;
+
+/** Rescue ray from above if wheels miss (m). Recovers a fall-through. */
+export const RESCUE_RAY = 8;
 
 /** Local wheel attach points (x right, y up, z nose). */
 export const WHEEL_LOCAL = [
