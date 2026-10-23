@@ -5,7 +5,16 @@
 import { STICK_DEADZONE } from "../constants.js";
 
 /** Standard mapping: × Cross, ○ Circle, □ Square, △ Triangle. */
-export const BTN = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3, L2: 6, R2: 7 };
+export const BTN = {
+  CROSS: 0,
+  CIRCLE: 1,
+  SQUARE: 2,
+  TRIANGLE: 3,
+  L2: 6,
+  R2: 7,
+  DUP: 12,
+  DDOWN: 13,
+};
 
 const ZERO_FOOT = { x: 0, y: 0 };
 
@@ -15,6 +24,8 @@ export const IDLE_INPUT = {
   pushRight: false,
   triangle: false,
   circle: false,
+  dpadUp: false,
+  dpadDown: false,
   front: ZERO_FOOT,
   back: ZERO_FOOT,
   frontYVel: 0,
@@ -107,6 +118,8 @@ export function readPlayInput(pad, regular, now) {
     pushRight: held(pad, BTN.CROSS),
     triangle: held(pad, BTN.TRIANGLE),
     circle: held(pad, BTN.CIRCLE),
+    dpadUp: held(pad, BTN.DUP),
+    dpadDown: held(pad, BTN.DDOWN),
     front,
     back,
     frontYVel,

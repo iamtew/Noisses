@@ -123,5 +123,12 @@ export function createEnvironment() {
     floors: [ground, ledge.floor],
     solids: [ledgeBox],
     grinds: [rail.grind, ledge.grind],
+    // Original spots for this pad. D-pad up/down cycles them.
+    spawns: [
+      { name: "Pad", x: 0, z: 0, yaw: 0 },
+      { name: "Rail", x: 1.7, z: 2.2, yaw: 0 },
+      { name: "Ledge", x: -1.75, z: 2.2, yaw: 0 },
+      { name: "Far side", x: 0, z: 10.5, yaw: Math.PI },
+    ],
   };
 }

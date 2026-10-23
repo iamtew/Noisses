@@ -5,7 +5,7 @@ import {
   pollValidGamepad,
   readPlayInput,
 } from "./input/gamepad.js";
-import { createBoardState, poseAt } from "./physics/board.js";
+import { applySpawn, createBoardState, poseAt } from "./physics/board.js";
 import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createEnvironment } from "./scene/environment.js";
@@ -23,7 +23,7 @@ const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
 const { renderer, scene, camera, sun } = setupScene(canvas);
-const { ground, grid, props, grinds, floors, solids } = createEnvironment();
+const { ground, grid, props, grinds, floors, solids, spawns } = createEnvironment();
 scene.add(ground);
 scene.add(grid);
 for (const p of props) scene.add(p);
@@ -41,10 +41,23 @@ const _quat = board.quat.clone();
 
 let playing = false;
 let stickDebug = false;
+let spawnIndex = 0;
+let spawnFlash = 0;
 let acc = 0;
 let last = performance.now();
 
+function goSpawn(delta) {
+  spawnIndex = (spawnIndex + delta + spawns.length) % spawns.length;
+  applySpawn(board, spawns[spawnIndex]);
+  for (let i = 0; i < 80 && !board.grounded; i++) {
+    stepWorld(board, FIXED_DT, IDLE_INPUT, floors, grinds, solids);
+  }
+  spawnFlash = 1.6;
+  followCamera(camera, board.pos, board.quat, 8, sun);
+}
+
 function hudText() {
+  if (spawnFlash > 0) return `SPAWN  ${spawns[spawnIndex].name}`;
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
   const trick = board.grinding
@@ -85,6 +98,11 @@ function tick(now) {
       else if (board.grounded) board.regular = !board.regular;
     }
     board.circleLatch = input.circle;
+    if (input.dpadUp && !board.dpadUpLatch) goSpawn(1);
+    board.dpadUpLatch = input.dpadUp;
+    if (input.dpadDown && !board.dpadDownLatch) goSpawn(-1);
+    board.dpadDownLatch = input.dpadDown;
+    if (spawnFlash > 0) spawnFlash = Math.max(0, spawnFlash - frameDt);
 
     acc += frameDt;
     while (acc >= FIXED_DT) {
