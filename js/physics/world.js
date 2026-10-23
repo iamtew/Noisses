@@ -2,7 +2,7 @@ import * as THREE from "three";
 import {
   AIR_ROLL,
   AIR_ROLL_DAMP,
-  AIR_YAW,
+  TRIGGER_YAW,
   BAIL_DOWN,
   BAIL_PITCH,
   BAIL_ROLL,
@@ -42,12 +42,15 @@ export function stepWorld(board, dt, input, ground) {
 
   const speed = Math.hypot(board.vel.x, board.vel.z);
   const airborne = !board.grounded;
+  // L2 left, R2 right. Was R2−L2 and air-only; that felt inverted and dead on the pad.
+  const lean = (input.l2 || 0) - (input.r2 || 0);
+  const turn = STEER_RATE * Math.min(speed, 2) + STEER_PIVOT;
+  board.yaw += lean * TRIGGER_YAW * (airborne ? 1 : turn / STEER_PIVOT) * dt;
   if (airborne) {
-    board.yaw += ((input.r2 || 0) - (input.l2 || 0)) * AIR_YAW * dt;
     board.roll += (input.steer || 0) * AIR_ROLL * dt;
     board.roll *= Math.exp(-AIR_ROLL_DAMP * dt);
   } else {
-    board.yaw += input.steer * (STEER_RATE * Math.min(speed, 2) + STEER_PIVOT) * dt;
+    board.yaw += input.steer * turn * dt;
     board.roll += (0 - board.roll) * (1 - Math.exp(-PITCH_FOLLOW * dt));
   }
 
@@ -69,7 +72,7 @@ export function stepWorld(board, dt, input, ground) {
   }
   board.pushLatch = input.push;
 
-  const pop = detectPop(input, board);
+  const pop = detectPop(input, board, dt);
   if (pop > 0) board.vel.y += pop / BOARD_MASS;
   if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
     board.vel.y += BONE_IMPULSE / BOARD_MASS;

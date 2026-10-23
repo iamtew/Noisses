@@ -14,6 +14,8 @@ export function createBoardState() {
     grounded: false,
     pushLatch: false,
     popLatch: false,
+    flickFront: 0,
+    flickBack: 0,
     triangleLatch: false,
     circleLatch: false,
     regular: true,

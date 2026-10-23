@@ -16,12 +16,13 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 
 - **× Cross** — push (once per press, on the ground)
 - **Stick Y** — weight nose ↔ tail (down = tail). Board pitches with the weight.
-- **Stick X** — steer / foot sideways
+- **Stick X** — foot sideways (and a little steer)
 - **Ollie** — hold **R** down (tail), flick **L** up
 - **Nollie** — hold **L** down, flick **R** up
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
-- **L2 / R2** — yaw in the air (small)
+- **L2** — turn left (ground and air)
+- **R2** — turn right (ground and air)
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
 

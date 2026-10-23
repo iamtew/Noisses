@@ -71,14 +71,17 @@ export const PITCH_MAX = 0.32;
 /** How fast pitch chases stick weight (1/s). */
 export const PITCH_FOLLOW = 12;
 
-/** Back foot stick Y (down = +) must exceed this to charge an ollie. */
-export const TAIL_HOLD = 0.4;
+/** Charge stick Y (down = +) to load tail / nollie reverse. */
+export const TAIL_HOLD = 0.28;
 
-/** Front stick Y must be this far up (−) at the flick. */
-export const FLICK_UP = -0.3;
+/** Flick stick must finish this far up (−). */
+export const FLICK_UP = -0.18;
 
-/** Front stick Y velocity (units/s). More negative = faster upward flick. */
-export const FLICK_SPEED = -8;
+/** Stick Y velocity (units/s). More negative = faster upward flick. */
+export const FLICK_SPEED = -5;
+
+/** Remember a flick this long so charge+flick need not be the same frame (s). */
+export const FLICK_WINDOW = 0.16;
 
 /** Base pop impulse (N·s). Heavy board, so this is chunky. */
 export const OLLIE_IMPULSE = 240;
@@ -90,8 +93,8 @@ export const OLLIE_FLICK_GAIN = 8;
 export const FOOT_X = 0.07;
 export const FOOT_Z = 0.28;
 
-/** Air yaw from R2 minus L2 (rad/s at full trigger). Limited on purpose. */
-export const AIR_YAW = 1.1;
+/** Trigger yaw (rad/s at full squeeze). L2 − R2 so L2 turns left, R2 right. */
+export const TRIGGER_YAW = 1.8;
 
 /** Air roll from combined stick X (rad/s). */
 export const AIR_ROLL = 0.9;

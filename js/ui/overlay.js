@@ -6,7 +6,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "×  push\nR stick down, L stick flick up  ollie\nL2/R2  air yaw    ○  stance    △  sticks",
+    body: "×  push     L2/R2  turn\nOllie  R down, L flick up\nNollie  L down, R flick up\n○  stance     △  sticks",
   },
 };
 
