@@ -1,57 +1,117 @@
 import * as THREE from "three";
 import { FOOT_X, FOOT_Z, WHEEL_LOCAL, WHEEL_RADIUS } from "../constants.js";
 
-/** Original low-poly deck + trucks + wheels. No commercial meshes. */
+/** Popsicle outline: parallel rails, rounded nose and tail. Original geometry. */
+function popsicleShape() {
+  const halfW = 0.102;
+  const shaft = 0.3;
+  const s = new THREE.Shape();
+  s.moveTo(-halfW, -shaft);
+  s.absarc(0, -shaft, halfW, Math.PI, 0, false);
+  s.lineTo(halfW, shaft);
+  s.absarc(0, shaft, halfW, 0, Math.PI, false);
+  s.closePath();
+  return s;
+}
+
+function extrudeDeck(depth, bevel) {
+  const geo = new THREE.ExtrudeGeometry(popsicleShape(), {
+    depth,
+    bevelEnabled: bevel,
+    bevelThickness: 0.002,
+    bevelSize: 0.003,
+    bevelSegments: 2,
+    curveSegments: 16,
+  });
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const kick = Math.max(0, (Math.abs(y) - 0.26) / 0.14);
+    pos.setZ(i, z + kick * kick * 0.07);
+  }
+  geo.rotateX(-Math.PI / 2);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function truckAt(z, metal) {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.055), metal);
+  base.position.y = 0.002;
+  const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.018, 0.028), metal);
+  hanger.position.y = -0.02;
+  const axle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.005, 0.005, 0.17, 8),
+    metal,
+  );
+  axle.rotation.z = Math.PI / 2;
+  axle.position.y = -0.028;
+  g.add(base, hanger, axle);
+  g.position.z = z;
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = true;
+  });
+  return g;
+}
+
+/** Original popsicle deck + trucks + wheels. No commercial meshes. */
 export function createBoardModel() {
   const group = new THREE.Group();
 
   const wood = new THREE.MeshStandardMaterial({
-    color: 0xc4a06a,
-    roughness: 0.8,
+    color: 0xb8894a,
+    roughness: 0.72,
+  });
+  const grip = new THREE.MeshStandardMaterial({
+    color: 0x1a1c1f,
+    roughness: 0.95,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: 0x6b7076,
-    roughness: 0.45,
-    metalness: 0.4,
+    color: 0x8a9098,
+    roughness: 0.35,
+    metalness: 0.65,
   });
   const urethane = new THREE.MeshStandardMaterial({
-    color: 0xcfc8b8,
-    roughness: 0.6,
+    color: 0xd8c4a0,
+    roughness: 0.55,
   });
 
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.04, 0.8), wood);
-  deck.position.y = 0.02;
-  group.add(deck);
+  const deck = new THREE.Mesh(extrudeDeck(0.013, true), wood);
+  deck.castShadow = true;
+  const tape = new THREE.Mesh(extrudeDeck(0.002, false), grip);
+  tape.position.y = 0.017;
+  tape.castShadow = true;
+  group.add(deck, tape);
 
-  for (const z of [0.205, -0.205]) {
-    const truck = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.05), metal);
-    truck.position.set(0, -0.01, z);
-    group.add(truck);
-  }
+  group.add(truckAt(0.205, metal));
+  group.add(truckAt(-0.205, metal));
 
   const wheels = [];
-  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.04, 12);
+  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.034, 18);
   for (const w of WHEEL_LOCAL) {
     const wheel = new THREE.Mesh(geo, urethane);
     wheel.rotation.z = Math.PI / 2;
     wheel.position.set(w.x, -0.08, w.z);
+    wheel.castShadow = true;
     group.add(wheel);
     wheels.push(wheel);
   }
 
-  const rubber = new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.7 });
-  const frontFoot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), rubber);
-  const backFoot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), rubber);
-  frontFoot.position.set(0, 0.055, FOOT_Z * 0.4);
-  backFoot.position.set(0, 0.055, -FOOT_Z * 0.4);
-  group.add(frontFoot);
-  group.add(backFoot);
+  const shoe = new THREE.MeshStandardMaterial({ color: 0x2a2e32, roughness: 0.8 });
+  const frontFoot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 8), shoe);
+  const backFoot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 8), shoe);
+  frontFoot.scale.set(1, 0.38, 1.45);
+  backFoot.scale.set(1, 0.38, 1.45);
+  frontFoot.castShadow = true;
+  backFoot.castShadow = true;
+  group.add(frontFoot, backFoot);
 
   return { group, wheels, frontFoot, backFoot };
 }
 
 /** Stick up (−Y) slides a foot toward the nose (+Z). Centered = over the trucks. */
 export function placeFeet(model, front, back) {
-  model.frontFoot.position.set(front.x * FOOT_X, 0.055, 0.18 - front.y * FOOT_Z);
-  model.backFoot.position.set(back.x * FOOT_X, 0.055, -0.18 - back.y * FOOT_Z);
+  model.frontFoot.position.set(front.x * FOOT_X, 0.028, 0.18 - front.y * FOOT_Z);
+  model.backFoot.position.set(back.x * FOOT_X, 0.028, -0.18 - back.y * FOOT_Z);
 }

@@ -51,16 +51,16 @@ export const STEER_RATE = 1.6;
 export const STEER_PIVOT = 0.9;
 
 /** Follow camera distance behind the board (m). */
-export const CAM_BACK = 2.6;
+export const CAM_BACK = 2.15;
 
 /** Nudge right so we see deck, not a tail sliver (m). */
-export const CAM_SIDE = 0.95;
+export const CAM_SIDE = 0.82;
 
 /** Follow camera height (m). */
-export const CAM_HEIGHT = 1.2;
+export const CAM_HEIGHT = 0.92;
 
 /** Camera look-at height above deck (m). */
-export const CAM_LOOK_Y = 0.45;
+export const CAM_LOOK_Y = 0.28;
 
 /** Follow smoothing rate (1/s). Higher = snappier. */
 export const CAM_FOLLOW = 6;

@@ -22,7 +22,7 @@ const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
-const { renderer, scene, camera } = setupScene(canvas);
+const { renderer, scene, camera, sun } = setupScene(canvas);
 const { ground, grid } = createEnvironment();
 scene.add(ground);
 scene.add(grid);
@@ -96,7 +96,7 @@ function tick(now) {
   for (const wheel of model.wheels) wheel.rotation.x = board.wheelSpin;
 
   sticks.set(input, board.regular, playing && stickDebug);
-  followCamera(camera, _pos, _quat, frameDt);
+  followCamera(camera, _pos, _quat, frameDt, sun);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
