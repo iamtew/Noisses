@@ -12,7 +12,7 @@ import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
-import { createSkater, poseSkater, selfCheckSkater } from "./scene/skaterModel.js";
+import { createSkater, placeSkater, poseSkater, selfCheckSkater } from "./scene/skaterModel.js";
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSticks } from "./ui/sticks.js";
 import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
@@ -37,8 +37,9 @@ scene.add(dust.points);
 const board = createBoardState();
 const model = createBoardModel();
 const skater = createSkater();
-model.group.add(skater.root);
+skater.root.add(model.frontFoot, model.backFoot);
 scene.add(model.group);
+scene.add(skater.root);
 const sfx = createAudio();
 
 const spawnMark = createSpawnMark();
@@ -278,6 +279,7 @@ function tick(now) {
   model.group.scale.set(squash, 1 - (setT + upT) * 0.06, squash);
   placeFeet(model, input.front, input.back);
   poseSkater(skater, model, input, board, frameDt);
+  placeSkater(skater, _pos, board);
   for (const wheel of model.wheels) wheel.rotation.x = board.wheelSpin;
 
   sticks.set(input, board.regular, playing && stickDebug);

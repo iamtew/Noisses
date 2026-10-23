@@ -7,6 +7,7 @@ const _unitY = new THREE.Vector3(0, 1, 0);
 const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
 const _ankle = new THREE.Vector3();
+const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
 function limb(radius, mat) {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.85, 1, 6), mat);
@@ -31,9 +32,11 @@ function aim(mesh, from, to) {
   mesh.scale.y = len;
 }
 
-/** Low-poly rider. Parent on the board so flips carry the body. */
+/** Low-poly rider. Lives in the scene, not on the deck, so the board can flip under the feet. */
 export function createSkater() {
   const root = new THREE.Group();
+  const body = new THREE.Group();
+  root.add(body);
   const pants = new THREE.MeshStandardMaterial({ color: 0x2a3140, roughness: 0.85 });
   const hoodie = new THREE.MeshStandardMaterial({ color: 0xc4532a, roughness: 0.78 });
   const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.7 });
@@ -55,10 +58,11 @@ export function createSkater() {
   const frontLower = limb(0.032, pants);
   const backUpper = limb(0.04, pants);
   const backLower = limb(0.032, pants);
-  root.add(chest, frontUpper, frontLower, backUpper, backLower);
+  body.add(chest, frontUpper, frontLower, backUpper, backLower);
 
   return {
     root,
+    body,
     chest,
     armL,
     armR,
@@ -113,8 +117,19 @@ export function poseSkater(skater, model, input, board, dt) {
   leg(skater.backUpper, skater.backLower, _hip, _ankle, side);
 
   const flop = Math.min(1, (board.bailed || 0) / 1.2);
-  skater.root.rotation.z = flop * side * 1.15;
-  skater.root.position.y = -flop * 0.1;
+  skater.body.rotation.z = flop * side * 1.15;
+  skater.body.position.y = -flop * 0.1;
+}
+
+/**
+ * Yaw and pitch only. Flip and shuv stay on the deck.
+ * While a flip is in the air, the body hangs above the board.
+ */
+export function placeSkater(skater, pos, board) {
+  skater.root.position.copy(pos);
+  if (!board.grounded && !board.caught) skater.root.position.y += 0.22;
+  _euler.set(board.pitch, board.yaw, board.roll);
+  skater.root.quaternion.setFromEuler(_euler);
 }
 
 export function selfCheckSkater() {
@@ -133,4 +148,16 @@ export function selfCheckSkater() {
   poseSkater(skater, model, input, board, 0.016);
   if (!(skater.chest.position.y > 0.4)) throw new Error("skater hip is on the deck");
   if (!Number.isFinite(skater.frontUpper.quaternion.w)) throw new Error("skater leg");
+
+  board.grounded = false;
+  board.caught = false;
+  board.pitch = 0;
+  board.yaw = 0.4;
+  board.roll = 0;
+  board.flip = Math.PI;
+  placeSkater(skater, new THREE.Vector3(1, 2, 3), board);
+  if (!(skater.root.position.y > 2.15)) throw new Error("skater should hang above a flipping board");
+  const upright = new THREE.Euler().setFromQuaternion(skater.root.quaternion, "YXZ");
+  if (Math.abs(upright.z) > 0.05) throw new Error("skater rolled with the kickflip");
+  if (Math.abs(upright.y - 0.4) > 0.05) throw new Error("skater lost yaw");
 }
