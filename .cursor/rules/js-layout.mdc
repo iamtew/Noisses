@@ -1,0 +1,29 @@
+---
+description: JS module tree, fixed timestep, constants live in one file
+globs: js/**/*.js
+alwaysApply: false
+---
+
+# JS layout
+
+Follow `bootstrap.md` §8. Do not invent a parallel tree.
+
+```
+js/main.js                 # rAF loop, pause when pad missing
+js/input/gamepad.js        # poll, two-stick check, disconnect
+js/physics/board.js        # later
+js/physics/skater.js       # later
+js/physics/world.js        # later
+js/tricks/detector.js      # later
+js/audio/engine.js         # later
+js/scene/setup.js          # Three.js scene, lights, camera
+js/scene/skaterModel.js    # later
+js/scene/boardModel.js     # later
+js/scene/environment.js    # later
+js/ui/overlay.js           # controller gate, pause, HUD
+js/constants.js            # every tunable, commented
+```
+
+- Fixed timestep (~1/120 s) + interpolation for render. rAF for the frame.
+- Tunables only in `constants.js`. Stick deadzone/invert belong there; settings UI comes later.
+- Phase 0: poll + overlay + cube + orbit camera. Do not add board physics yet.

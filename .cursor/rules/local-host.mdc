@@ -1,0 +1,12 @@
+---
+description: Meat Bag hosts the site on localhost:8000 — Clanker does not start a server
+alwaysApply: true
+---
+
+# Local host
+
+Meat Bag serves this project at **http://localhost:8000**.
+
+- Verify and browse against that URL.
+- Do not start `npx serve`, Live Server, Python http.server, or any other local host.
+- If 8000 is down, say so and wait. Do not pick another port.

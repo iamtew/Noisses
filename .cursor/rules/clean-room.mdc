@@ -1,0 +1,14 @@
+---
+description: Clean-room rules — original assets and invented physics only
+alwaysApply: true
+---
+
+# Clean-room
+
+This is an original dual-stick skate sim (**Noisses**). Do not reverse-engineer, decompile, or copy assets, code, models, sounds, or exact numbers from *Session: Skate Sim*.
+
+- Original geometry, textures, animation, and sound only.
+- Never load files from any commercial skate game.
+- Do not use official Session names, logos, or character likenesses.
+- Physics constants are invented here. Write them in `js/constants.js` with comments. Unknown value → pick heavy/realistic and document it.
+- Trick detection comes from the behavioral spec in `bootstrap.md`, not recorded game data.

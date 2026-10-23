@@ -1,0 +1,16 @@
+---
+description: Static Three.js site — no backend, sequential phases
+alwaysApply: true
+---
+
+# Stack
+
+Static GitHub Pages site. HTML + JS + CSS + `/assets/`. Hostable with no server.
+
+- ES modules. Three.js r160+ via import map / CDN (esm.sh or jsDelivr). No build step required.
+- Web Audio API for all sound. No extra audio libraries.
+- No Node server, WebSockets, backend, or new npm deps.
+- Works offline once cached (service worker optional).
+- Target 60 fps; degrade gracefully.
+
+Phases 0→7 in `bootstrap.md`, in order. After each phase: the page still runs and the controller gate still blocks skating. Do not skip ahead.
