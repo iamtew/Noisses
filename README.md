@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 5: popsicle board with trucks, rail + ledge, grind from contact. Gamepad required.
+Phase 6: popsicle board, rail + ledge, grind from contact, synthesized Web Audio. Gamepad required.
 
 ## Run locally
 
@@ -32,6 +32,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Grind** — rail is on the **right**, ledge on the **left**, both run forward. Push, stay along them, ollie so trucks hit. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
+- Sound starts when you press a button (rolling, push, pop, grind, land, bail)
 
 ## Deploy (GitHub Pages)
 

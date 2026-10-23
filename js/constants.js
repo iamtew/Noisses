@@ -74,6 +74,9 @@ export const CAM_FOLLOW = 6;
 /** D-pad down/up must be held this long to set / respawn (s). Taps do nothing. */
 export const SPAWN_HOLD = 0.8;
 
+/** Master gain for synthesized skate bed. */
+export const AUDIO_MASTER = 0.38;
+
 /** Max board pitch from weight, rad. Tail-heavy (sticks down) raises the nose. */
 export const PITCH_MAX = 0.32;
 

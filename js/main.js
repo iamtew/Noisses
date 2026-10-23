@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createAudio, selfCheckAudio } from "./audio/engine.js";
 import { FIXED_DT, SPAWN_HOLD } from "./constants.js";
 import {
   IDLE_INPUT,
@@ -18,6 +19,7 @@ import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
 selfCheck();
 selfCheckPop();
 selfCheckFlip();
+selfCheckAudio();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
@@ -32,6 +34,7 @@ for (const p of props) scene.add(p);
 const board = createBoardState();
 const model = createBoardModel();
 scene.add(model.group);
+const sfx = createAudio();
 
 const spawnMark = createSpawnMark();
 scene.add(spawnMark.group);
@@ -91,6 +94,7 @@ function setSpawnHere() {
   markPunch = 1;
   spawnMsg = "SPAWN SET";
   spawnFlash = 1.4;
+  sfx.spawnSet();
 }
 
 function respawnHere() {
@@ -98,6 +102,7 @@ function respawnHere() {
   settleBoard();
   spawnMsg = "RESPAWNED";
   spawnFlash = 1.4;
+  sfx.spawnGo();
 }
 
 function tickHold(input, dt) {
@@ -184,7 +189,10 @@ function tick(now) {
     overlay.show("missing");
   } else if (!playing) {
     overlay.show("press");
-    if (anyButtonPressed(pad)) playing = true;
+    if (anyButtonPressed(pad)) {
+      playing = true;
+      sfx.resume();
+    }
   }
   if (playing) overlay.hide();
   hud.hidden = !playing;
@@ -199,6 +207,7 @@ function tick(now) {
         board.grind = null;
         board.vel.set(0, 0, 0);
         board.bailed = 1.2;
+        sfx.bail();
       }
       else if (board.grounded) board.regular = !board.regular;
     }
@@ -209,10 +218,26 @@ function tick(now) {
 
     acc += frameDt;
     while (acc >= FIXED_DT) {
+      const wasGrounded = board.grounded;
+      const wasBailed = board.bailed;
+      const vy = board.vel.y;
+      const willPush =
+        board.grounded &&
+        ((input.pushLeft && !board.pushLeftLatch) ||
+          (input.pushRight && !board.pushRightLatch));
       stepWorld(board, FIXED_DT, input, floors, grinds, solids);
+      if (willPush) sfx.push();
+      if (!board.grounded && wasGrounded && board.vel.y > 0.35) sfx.pop();
+      if (board.grounded && !wasGrounded) {
+        if (board.bailed > 0 && wasBailed <= 0) sfx.bail();
+        else sfx.land(-vy);
+      }
       acc -= FIXED_DT;
     }
+    const speed = Math.hypot(board.vel.x, board.vel.z);
+    sfx.tick(speed, board.grounded, board.grinding, board.flipRate);
   } else {
+    sfx.tick(0, false, false, 0);
     acc = 0;
     holdDown = 0;
     holdUp = 0;
