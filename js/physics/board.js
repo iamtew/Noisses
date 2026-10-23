@@ -34,8 +34,6 @@ export function createBoardState() {
     flickBackX: 0,
     grinding: false,
     grind: null,
-    dpadUpLatch: false,
-    dpadDownLatch: false,
     wheelSpin: 0,
   };
 }

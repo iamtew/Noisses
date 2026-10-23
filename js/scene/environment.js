@@ -92,6 +92,39 @@ function makeLedge() {
   return { group, grind, floor: block };
 }
 
+function markMat(color, opacity) {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+}
+
+/** Painted circle + facing chevron. Charge ring is animated from main. */
+export function createSpawnMark() {
+  const group = new THREE.Group();
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.4, 28), markMat(0x1a4a82, 0.48));
+  disc.rotation.x = -Math.PI / 2;
+  const rim = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 32), markMat(0xe4eef8, 0.88));
+  rim.rotation.x = -Math.PI / 2;
+  const nose = new THREE.Mesh(new THREE.CircleGeometry(0.13, 3), markMat(0xe4eef8, 0.95));
+  nose.rotation.x = -Math.PI / 2;
+  nose.rotation.z = -Math.PI / 2;
+  nose.position.z = 0.22;
+  group.add(disc, rim, nose);
+  group.position.y = 0.03;
+
+  const charge = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.34, 40), markMat(0xffffff, 0));
+  charge.rotation.x = -Math.PI / 2;
+  charge.position.y = 0.04;
+  charge.visible = false;
+  return { group, charge };
+}
+
 /** Pad, a forward rail (right), a rideable ledge (left). */
 export function createEnvironment() {
   const ground = new THREE.Mesh(
@@ -123,12 +156,5 @@ export function createEnvironment() {
     floors: [ground, ledge.floor],
     solids: [ledgeBox],
     grinds: [rail.grind, ledge.grind],
-    // Original spots for this pad. D-pad up/down cycles them.
-    spawns: [
-      { name: "Pad", x: 0, z: 0, yaw: 0 },
-      { name: "Rail", x: 1.7, z: 2.2, yaw: 0 },
-      { name: "Ledge", x: -1.75, z: 2.2, yaw: 0 },
-      { name: "Far side", x: 0, z: 10.5, yaw: Math.PI },
-    ],
   };
 }

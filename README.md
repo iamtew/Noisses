@@ -27,7 +27,8 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **△ Triangle** — stick debug overlay
 - **L2** — turn left (ground and air)
 - **R2** — turn right (ground and air)
-- **D-pad up / down** — cycle spawn spots (pad, rail, ledge, far side)
+- **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.
+- **Hold D-pad up** — respawn at that mark (tap does nothing)
 - **Grind** — rail is on the **right**, ledge on the **left**, both run forward. Push, stay along them, ollie so trucks hit. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
