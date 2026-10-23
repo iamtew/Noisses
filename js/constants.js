@@ -77,6 +77,25 @@ export const SPAWN_HOLD = 0.8;
 /** Master gain for synthesized skate bed. */
 export const AUDIO_MASTER = 0.38;
 
+/** Resonant lowpass on rolling noise. Q is the ring; higher = more tone, less hiss. */
+export const ROLL_Q = 4.5;
+export const ROLL_HZ = 260;
+export const ROLL_HZ_SPEED = 70;
+
+/** Resonant band on a grind, then a lowpass so the ring does not fizz. */
+export const GRIND_Q = 5.5;
+export const GRIND_HZ = 640;
+export const GRIND_HZ_SPEED = 45;
+export const GRIND_LP = 2200;
+
+/** Flip whoosh. Bandpass, not an open highpass. */
+export const WHOOSH_Q = 1.8;
+export const WHOOSH_HZ = 520;
+
+/** Master high-shelf (dB, negative = cut). Catches leftover hiss above the voices. */
+export const NOISE_SHELF_HZ = 2800;
+export const NOISE_SHELF_DB = -9;
+
 /** Max board pitch from weight, rad. Tail-heavy (sticks down) raises the nose. */
 export const PITCH_MAX = 0.32;
 

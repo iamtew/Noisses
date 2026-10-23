@@ -32,7 +32,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Grind** — rail is on the **right**, ledge on the **left**, both run forward. Push, stay along them, ollie so trucks hit. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
-- Sound starts when you press a button (rolling, push, pop, grind, land, bail)
+- Sound starts when you press a button (rolling, push, pop, grind, land, bail). Noise is pink, then a resonant filter, with a high shelf on the master.
 
 ## Deploy (GitHub Pages)
 
