@@ -26,4 +26,4 @@ js/constants.js            # every tunable, commented
 
 - Fixed timestep (~1/120 s) + interpolation for render. rAF for the frame.
 - Tunables only in `constants.js`. Stick deadzone/invert belong there; settings UI comes later.
-- Phase 1: board + ground rays + push/steer + follow camera. No flip detector, no grind lock, no Web Audio yet.
+- Phase 2: dual-stick weight, foot markers, ollie flick. No grind lock, no Web Audio yet.

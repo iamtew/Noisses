@@ -1,10 +1,30 @@
 // Poll every play frame. A valid pad has two analog sticks (four axes).
 // Face buttons use the standard mapping, labeled PlayStation: × ○ □ △
+// L2/R2 are buttons 6/7 (analog triggers).
 
 import { STICK_DEADZONE } from "../constants.js";
 
 /** Standard mapping: × Cross, ○ Circle, □ Square, △ Triangle. */
-export const BTN = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3 };
+export const BTN = { CROSS: 0, CIRCLE: 1, SQUARE: 2, TRIANGLE: 3, L2: 6, R2: 7 };
+
+const ZERO_FOOT = { x: 0, y: 0 };
+
+export const IDLE_INPUT = {
+  steer: 0,
+  push: false,
+  triangle: false,
+  circle: false,
+  front: ZERO_FOOT,
+  back: ZERO_FOOT,
+  frontYVel: 0,
+  backYVel: 0,
+  l2: 0,
+  r2: 0,
+};
+
+let prevFrontY = 0;
+let prevBackY = 0;
+let prevTime = 0;
 
 /**
  * @param {Gamepad | null | undefined} pad
@@ -27,6 +47,11 @@ function held(pad, i) {
   return Boolean(b && (b.pressed || b.value > 0.5));
 }
 
+function trigger(pad, i) {
+  const b = pad.buttons[i];
+  return b ? b.value : 0;
+}
+
 /** True if any digital button is down this poll. */
 export function anyButtonPressed(pad) {
   if (!pad) return false;
@@ -42,13 +67,40 @@ function axis(pad, i) {
 }
 
 /**
- * Play input. Steer is both sticks' X (feet shifting sideways).
- * Push is × Cross. □ Square is reserved (not a push).
+ * @param {Gamepad} pad
+ * @param {boolean} regular Regular: left = front foot, right = back foot.
+ * @param {number} now performance.now()
  */
-export function readPlayInput(pad) {
-  if (!pad) return { steer: 0, push: false };
+export function readPlayInput(pad, regular, now) {
+  if (!pad) {
+    prevFrontY = 0;
+    prevBackY = 0;
+    return IDLE_INPUT;
+  }
+  const lx = axis(pad, 0);
+  const ly = axis(pad, 1);
+  const rx = axis(pad, 2);
+  const ry = axis(pad, 3);
+  const front = regular ? { x: lx, y: ly } : { x: rx, y: ry };
+  const back = regular ? { x: rx, y: ry } : { x: lx, y: ly };
+  const dt = prevTime ? Math.max(0.001, (now - prevTime) / 1000) : FIXED_FALLBACK;
+  const frontYVel = (front.y - prevFrontY) / dt;
+  const backYVel = (back.y - prevBackY) / dt;
+  prevFrontY = front.y;
+  prevBackY = back.y;
+  prevTime = now;
   return {
-    steer: (axis(pad, 0) + axis(pad, 2)) * 0.5,
+    steer: (front.x + back.x) * 0.5,
     push: held(pad, BTN.CROSS),
+    triangle: held(pad, BTN.TRIANGLE),
+    circle: held(pad, BTN.CIRCLE),
+    front,
+    back,
+    frontYVel,
+    backYVel,
+    l2: trigger(pad, BTN.L2),
+    r2: trigger(pad, BTN.R2),
   };
 }
+
+const FIXED_FALLBACK = 1 / 60;

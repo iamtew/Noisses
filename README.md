@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 1: board on a flat pad, gravity, push, steer, follow camera. Gamepad required.
+Phase 2: board on a pad, dual-stick feet, weight pitch, ollie flick. Gamepad required.
 
 ## Run locally
 
@@ -12,11 +12,15 @@ Without a two-stick gamepad you get a blocking overlay. Connect a pad, press any
 
 ## Controls
 
-PlayStation face buttons (standard gamepad mapping).
+PlayStation face buttons. Regular stance (default): left stick = front foot, right stick = back foot.
 
-- **× Cross** — push (once per press, while on the ground)
-- **Left + right stick X** — steer
-- **□ ○ △** — unused for now
+- **× Cross** — push (once per press, on the ground)
+- **Stick Y** — weight nose ↔ tail (down = tail). Board pitches with the weight.
+- **Stick X** — steer / foot sideways
+- **Ollie** — hold **R** down (tail), flick **L** up
+- **Nollie** — hold **L** down, flick **R** up
+- **○ Circle** — toggle Regular / Goofy (on the ground)
+- **△ Triangle** — stick debug overlay
 - Keyboard is not skating
 
 ## Deploy (GitHub Pages)

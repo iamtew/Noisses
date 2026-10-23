@@ -9,8 +9,14 @@ export function createBoardState() {
     prevQuat: new THREE.Quaternion(),
     vel: new THREE.Vector3(),
     yaw: 0,
+    pitch: 0,
+    roll: 0,
     grounded: false,
     pushLatch: false,
+    popLatch: false,
+    triangleLatch: false,
+    circleLatch: false,
+    regular: true,
     wheelSpin: 0,
   };
 }

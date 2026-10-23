@@ -6,6 +6,8 @@ import {
   GROUND_FRICTION,
   LANDING_DAMP,
   MAX_SPEED,
+  PITCH_FOLLOW,
+  PITCH_MAX,
   PUSH_IMPULSE,
   RAY_FAR,
   RESCUE_RAY,
@@ -15,11 +17,12 @@ import {
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
+import { detectPop } from "../tricks/detector.js";
 
-const UP = new THREE.Vector3(0, 1, 0);
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
 const _forward = new THREE.Vector3();
+const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 const _ray = new THREE.Raycaster();
 
 export function stepWorld(board, dt, input, ground) {
@@ -32,7 +35,15 @@ export function stepWorld(board, dt, input, ground) {
 
   const speed = Math.hypot(board.vel.x, board.vel.z);
   board.yaw += input.steer * (STEER_RATE * Math.min(speed, 2) + STEER_PIVOT) * dt;
-  board.quat.setFromAxisAngle(UP, board.yaw);
+
+  const front = input.front || { x: 0, y: 0 };
+  const back = input.back || { x: 0, y: 0 };
+  // Sticks down (+) load the tail → nose up → negative pitch (YXZ, +Z nose).
+  const pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
+  board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-PITCH_FOLLOW * dt));
+
+  _euler.set(board.pitch, board.yaw, board.roll);
+  board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
 
   board.vel.y -= GRAVITY * dt;
@@ -41,6 +52,9 @@ export function stepWorld(board, dt, input, ground) {
     board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
   }
   board.pushLatch = input.push;
+
+  const pop = detectPop(input, board);
+  if (pop > 0) board.vel.y += pop / BOARD_MASS;
 
   const hSpeed = Math.hypot(board.vel.x, board.vel.z);
   if (hSpeed > MAX_SPEED) {
@@ -82,8 +96,10 @@ export function stepWorld(board, dt, input, ground) {
   }
 
   board.grounded = grounded;
-  if (lift > 0) board.pos.y += lift;
-  if (grounded) {
+  // Leaving the ground: skip the glue so an ollie can actually pop.
+  const sticking = grounded && board.vel.y <= 0.35;
+  if (lift > 0 && sticking) board.pos.y += lift;
+  if (sticking) {
     if (board.vel.y < 0) board.vel.y *= LANDING_DAMP;
     const damp = Math.exp(-GROUND_FRICTION * dt);
     board.vel.x *= damp;

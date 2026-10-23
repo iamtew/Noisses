@@ -30,6 +30,47 @@ body {
   display: none;
 }
 
+#sticks {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+#sticks[hidden] {
+  display: none;
+}
+
+#sticks .pad {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #888;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+#sticks .pad span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1.2rem;
+  text-align: center;
+  font-size: 0.7rem;
+}
+
+#sticks .pad b {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #eee;
+}
+
 #gate {
   position: fixed;
   inset: 0;

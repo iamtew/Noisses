@@ -64,3 +64,28 @@ export const CAM_LOOK_Y = 0.45;
 
 /** Follow smoothing rate (1/s). Higher = snappier. */
 export const CAM_FOLLOW = 6;
+
+/** Max board pitch from weight, rad. Tail-heavy (sticks down) raises the nose. */
+export const PITCH_MAX = 0.32;
+
+/** How fast pitch chases stick weight (1/s). */
+export const PITCH_FOLLOW = 12;
+
+/** Back foot stick Y (down = +) must exceed this to charge an ollie. */
+export const TAIL_HOLD = 0.4;
+
+/** Front stick Y must be this far up (−) at the flick. */
+export const FLICK_UP = -0.3;
+
+/** Front stick Y velocity (units/s). More negative = faster upward flick. */
+export const FLICK_SPEED = -8;
+
+/** Base pop impulse (N·s). Heavy board, so this is chunky. */
+export const OLLIE_IMPULSE = 240;
+
+/** Extra pop from flick speed, N·s per (stick-unit/s). */
+export const OLLIE_FLICK_GAIN = 8;
+
+/** Foot marker travel on the deck (m). */
+export const FOOT_X = 0.07;
+export const FOOT_Z = 0.28;

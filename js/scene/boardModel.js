@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { WHEEL_LOCAL, WHEEL_RADIUS } from "../constants.js";
+import { FOOT_X, FOOT_Z, WHEEL_LOCAL, WHEEL_RADIUS } from "../constants.js";
 
 /** Original low-poly deck + trucks + wheels. No commercial meshes. */
 export function createBoardModel() {
@@ -39,5 +39,19 @@ export function createBoardModel() {
     wheels.push(wheel);
   }
 
-  return { group, wheels };
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.7 });
+  const frontFoot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), rubber);
+  const backFoot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), rubber);
+  frontFoot.position.set(0, 0.055, FOOT_Z * 0.4);
+  backFoot.position.set(0, 0.055, -FOOT_Z * 0.4);
+  group.add(frontFoot);
+  group.add(backFoot);
+
+  return { group, wheels, frontFoot, backFoot };
+}
+
+/** Stick up (−Y) slides a foot toward the nose (+Z). Centered = over the trucks. */
+export function placeFeet(model, front, back) {
+  model.frontFoot.position.set(front.x * FOOT_X, 0.055, 0.18 - front.y * FOOT_Z);
+  model.backFoot.position.set(back.x * FOOT_X, 0.055, -0.18 - back.y * FOOT_Z);
 }
