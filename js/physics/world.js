@@ -6,6 +6,7 @@ import {
   BAIL_DOWN,
   BAIL_PITCH,
   BAIL_ROLL,
+  CATCH_ANGLE,
   BOARD_MASS,
   BONE_IMPULSE,
   FIXED_DT,
@@ -24,7 +25,7 @@ import {
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
-import { detectPop } from "../tricks/detector.js";
+import { detectPop, stepFlip, wrapPi } from "../tricks/detector.js";
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
@@ -42,26 +43,35 @@ export function stepWorld(board, dt, input, ground) {
 
   const speed = Math.hypot(board.vel.x, board.vel.z);
   const airborne = !board.grounded;
+  const front = input.front || { x: 0, y: 0 };
+  const back = input.back || { x: 0, y: 0 };
   // L2 left, R2 right. Was R2−L2 and air-only; that felt inverted and dead on the pad.
   const lean = (input.l2 || 0) - (input.r2 || 0);
   const turn = STEER_RATE * Math.min(speed, 2) + STEER_PIVOT;
   board.yaw += lean * TRIGGER_YAW * (airborne ? 1 : turn / STEER_PIVOT) * dt;
   if (airborne) {
-    board.roll += (input.steer || 0) * AIR_ROLL * dt;
+    // Front X is the scoop. Lean only from the back foot.
+    board.roll += back.x * AIR_ROLL * dt;
     board.roll *= Math.exp(-AIR_ROLL_DAMP * dt);
   } else {
     board.yaw += input.steer * turn * dt;
     board.roll += (0 - board.roll) * (1 - Math.exp(-PITCH_FOLLOW * dt));
   }
-
-  const front = input.front || { x: 0, y: 0 };
-  const back = input.back || { x: 0, y: 0 };
   // Sticks down (+) load the tail → nose up → negative pitch (YXZ, +Z nose).
   const pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
   const pitchRate = airborne ? PITCH_FOLLOW * 0.25 : PITCH_FOLLOW;
   board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-pitchRate * dt));
 
-  _euler.set(board.pitch, board.yaw, board.roll);
+  const pop = detectPop(input, board, dt);
+  if (pop > 0) board.vel.y += pop / BOARD_MASS;
+  if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
+    board.vel.y += BONE_IMPULSE / BOARD_MASS;
+    board.boned = true;
+  }
+  if (!airborne) board.boned = false;
+
+  stepFlip(input, board, dt, airborne);
+  _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
 
@@ -77,14 +87,6 @@ export function stepWorld(board, dt, input, ground) {
   }
   board.pushLeftLatch = Boolean(input.pushLeft);
   board.pushRightLatch = Boolean(input.pushRight);
-
-  const pop = detectPop(input, board, dt);
-  if (pop > 0) board.vel.y += pop / BOARD_MASS;
-  if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
-    board.vel.y += BONE_IMPULSE / BOARD_MASS;
-    board.boned = true;
-  }
-  if (!airborne) board.boned = false;
 
   const hSpeed = Math.hypot(board.vel.x, board.vel.z);
   if (hSpeed > MAX_SPEED) {
@@ -129,7 +131,10 @@ export function stepWorld(board, dt, input, ground) {
     const ugly =
       Math.abs(board.pitch) > BAIL_PITCH ||
       Math.abs(board.roll) > BAIL_ROLL ||
-      -board.vel.y > BAIL_DOWN;
+      -board.vel.y > BAIL_DOWN ||
+      Math.abs(wrapPi(board.flip)) > CATCH_ANGLE ||
+      Math.abs(wrapPi(board.shuv)) > CATCH_ANGLE ||
+      (!board.caught && (Math.abs(board.flip) > 0.35 || Math.abs(board.shuv) > 0.35));
     if (ugly) bail(board);
   }
   board.wasGrounded = grounded;
@@ -152,6 +157,12 @@ function bail(board) {
   board.vel.set(0, 0, 0);
   board.pitch = 0;
   board.roll = 0;
+  board.flip = 0;
+  board.flipRate = 0;
+  board.shuv = 0;
+  board.shuvRate = 0;
+  board.caught = true;
+  board.trick = "";
   board.bailed = 1.2;
 }
 

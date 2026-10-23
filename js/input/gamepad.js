@@ -19,12 +19,16 @@ export const IDLE_INPUT = {
   back: ZERO_FOOT,
   frontYVel: 0,
   backYVel: 0,
+  frontXVel: 0,
+  backXVel: 0,
   l2: 0,
   r2: 0,
 };
 
 let prevFrontY = 0;
 let prevBackY = 0;
+let prevFrontX = 0;
+let prevBackX = 0;
 let prevTime = 0;
 
 /**
@@ -76,6 +80,8 @@ export function readPlayInput(pad, regular, now) {
   if (!pad) {
     prevFrontY = 0;
     prevBackY = 0;
+    prevFrontX = 0;
+    prevBackX = 0;
     return IDLE_INPUT;
   }
   const lx = axis(pad, 0);
@@ -87,8 +93,12 @@ export function readPlayInput(pad, regular, now) {
   const dt = prevTime ? Math.max(0.001, (now - prevTime) / 1000) : FIXED_FALLBACK;
   const frontYVel = (front.y - prevFrontY) / dt;
   const backYVel = (back.y - prevBackY) / dt;
+  const frontXVel = (front.x - prevFrontX) / dt;
+  const backXVel = (back.x - prevBackX) / dt;
   prevFrontY = front.y;
   prevBackY = back.y;
+  prevFrontX = front.x;
+  prevBackX = back.x;
   prevTime = now;
   return {
     steer: (front.x + back.x) * 0.5,
@@ -101,6 +111,8 @@ export function readPlayInput(pad, regular, now) {
     back,
     frontYVel,
     backYVel,
+    frontXVel,
+    backXVel,
     l2: trigger(pad, BTN.L2),
     r2: trigger(pad, BTN.R2),
   };

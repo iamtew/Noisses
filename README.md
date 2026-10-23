@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 3: dual-stick feet, ollie, air, landing, bail. Gamepad required.
+Phase 4: dual-stick feet, ollie, kick/heelflip, catch, bail. Gamepad required.
 
 ## Run locally
 
@@ -17,9 +17,12 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **□ Square** — push with the **left** foot (once per press, on the ground)
 - **× Cross** — push with the **right** foot (once per press, on the ground)
 - **Stick Y** — weight nose ↔ tail (down = tail). Board pitches with the weight.
-- **Stick X** — foot sideways (and a little steer)
+- **Stick X** — foot sideways. In the air, **front stick L/R** scoops a flip.
 - **Ollie** — hold **R** down (tail), flick **L** up
 - **Nollie** — hold **L** down, flick **R** up
+- **Kickflip** — ollie, scoop **front stick right** (regular). Return sticks to center to catch.
+- **Heelflip** — ollie, scoop **front stick left**. Catch the same way.
+- **Shuvit** — ollie, scoop **back stick** left or right.
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
 - **L2** — turn left (ground and air)

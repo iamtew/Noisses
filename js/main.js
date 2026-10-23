@@ -12,10 +12,11 @@ import { createEnvironment } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSticks } from "./ui/sticks.js";
-import { selfCheckPop } from "./tricks/detector.js";
+import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
 
 selfCheck();
 selfCheckPop();
+selfCheckFlip();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
@@ -45,7 +46,10 @@ let last = performance.now();
 function hudText() {
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
-  return `□ left push · × right push · L2/R2 turn · ollie R↓ L↑ · nollie L↓ R↑ · ○ ${stance} · △ sticks`;
+  const trick = board.trick && !board.grounded
+    ? ` · ${board.trick}${board.caught ? " caught" : ""}`
+    : "";
+  return `□/× push · L2/R2 turn · ollie then front-stick L/R flip · ○ ${stance} · △ sticks${trick}`;
 }
 
 function tick(now) {

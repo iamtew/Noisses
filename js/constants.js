@@ -113,3 +113,27 @@ export const BAIL_DOWN = 9;
 
 /** Extra pop if both sticks stay up after leaving the ground (N·s). */
 export const BONE_IMPULSE = 40;
+
+/** After pop, this long to start a flip/shuv (s). */
+export const SCOOP_WINDOW = 0.28;
+
+/** Front stick |X| to count as a scoop. */
+export const SCOOP_X = 0.35;
+
+/** |stick X velocity| (units/s) that counts as a scoop flick. */
+export const SCOOP_SPEED = 4;
+
+/** Kick/heelflip spin (rad/s). Sign from front stick X. ~one rev in 0.4 s. */
+export const FLIP_SPIN = 16;
+
+/** Shuv spin around yaw from back stick X (rad/s). */
+export const SHUV_SPIN = 10;
+
+/** Spin bleed (1/s). Low so a scoop keeps rotating until catch. */
+export const FLIP_DAMP = 0.35;
+
+/** Sticks inside this radius = trying to catch. */
+export const CATCH_STICK = 0.28;
+
+/** Land/catch if flip (or shuv) is this close to a full turn, rad. ~35°. */
+export const CATCH_ANGLE = 0.6;

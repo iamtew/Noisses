@@ -23,6 +23,15 @@ export function createBoardState() {
     wasGrounded: true,
     boned: false,
     bailed: 0,
+    airTime: 0,
+    flip: 0,
+    flipRate: 0,
+    shuv: 0,
+    shuvRate: 0,
+    caught: true,
+    trick: "",
+    flickFrontX: 0,
+    flickBackX: 0,
     wheelSpin: 0,
   };
 }

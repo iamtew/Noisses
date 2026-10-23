@@ -1,10 +1,18 @@
 import {
+  CATCH_ANGLE,
+  CATCH_STICK,
   FIXED_DT,
   FLICK_SPEED,
   FLICK_UP,
   FLICK_WINDOW,
+  FLIP_DAMP,
+  FLIP_SPIN,
   OLLIE_FLICK_GAIN,
   OLLIE_IMPULSE,
+  SCOOP_SPEED,
+  SCOOP_WINDOW,
+  SCOOP_X,
+  SHUV_SPIN,
   TAIL_HOLD,
 } from "../constants.js";
 
@@ -13,6 +21,16 @@ function rememberFlick(board, input, dt) {
   else board.flickFront = Math.max(0, (board.flickFront || 0) - dt);
   if (input.backYVel < FLICK_SPEED) board.flickBack = FLICK_WINDOW;
   else board.flickBack = Math.max(0, (board.flickBack || 0) - dt);
+  if (Math.abs(input.frontXVel || 0) > SCOOP_SPEED) board.flickFrontX = FLICK_WINDOW;
+  else board.flickFrontX = Math.max(0, (board.flickFrontX || 0) - dt);
+  if (Math.abs(input.backXVel || 0) > SCOOP_SPEED) board.flickBackX = FLICK_WINDOW;
+  else board.flickBackX = Math.max(0, (board.flickBackX || 0) - dt);
+}
+
+/** Signed distance to the nearest full turn, in (−π, π]. */
+export function wrapPi(a) {
+  const t = Math.PI * 2;
+  return ((((a + Math.PI) % t) + t) % t) - Math.PI;
 }
 
 /**
@@ -84,4 +102,87 @@ export function selfCheckPop() {
     board,
   );
   if (!(nollie > OLLIE_IMPULSE)) throw new Error("pop self-check: nollie flick missed");
+}
+
+/**
+ * Front stick X scoop → kickflip (+) / heelflip (−).
+ * Back stick X scoop → shuv. Catch = both sticks in the dead zone near a full turn.
+ */
+export function stepFlip(input, board, dt, airborne) {
+  const front = input.front || { x: 0, y: 0 };
+  const back = input.back || { x: 0, y: 0 };
+
+  if (!airborne) {
+    board.airTime = 0;
+    if (board.caught || (Math.abs(board.flip) < 0.05 && Math.abs(board.shuv) < 0.05)) {
+      board.flip = 0;
+      board.flipRate = 0;
+      board.shuv = 0;
+      board.shuvRate = 0;
+      board.caught = true;
+      board.trick = "";
+    }
+    return;
+  }
+
+  board.airTime += dt;
+
+  if (board.airTime < SCOOP_WINDOW) {
+    if (board.flipRate === 0 && board.flickFrontX > 0 && Math.abs(front.x) > SCOOP_X) {
+      board.flipRate = Math.sign(front.x) * FLIP_SPIN;
+      board.caught = false;
+      board.trick = front.x > 0 ? "kickflip" : "heelflip";
+    }
+    if (board.shuvRate === 0 && board.flickBackX > 0 && Math.abs(back.x) > SCOOP_X) {
+      board.shuvRate = Math.sign(back.x) * SHUV_SPIN;
+      board.caught = false;
+      if (!board.trick) board.trick = "shuvit";
+      else if (board.trick === "kickflip") board.trick = "varial kickflip";
+      else if (board.trick === "heelflip") board.trick = "varial heelflip";
+    }
+  }
+
+  board.flip += board.flipRate * dt;
+  board.shuv += board.shuvRate * dt;
+  board.flipRate *= Math.exp(-FLIP_DAMP * dt);
+  board.shuvRate *= Math.exp(-FLIP_DAMP * dt);
+
+  const centered =
+    Math.hypot(front.x, front.y) < CATCH_STICK &&
+    Math.hypot(back.x, back.y) < CATCH_STICK;
+  if (centered && !board.caught) {
+    const flipErr = wrapPi(board.flip);
+    const shuvErr = wrapPi(board.shuv);
+    if (Math.abs(flipErr) < CATCH_ANGLE && Math.abs(shuvErr) < CATCH_ANGLE) {
+      board.flip -= flipErr;
+      board.shuv -= shuvErr;
+      board.flipRate = 0;
+      board.shuvRate = 0;
+      board.caught = true;
+    }
+  }
+}
+
+export function selfCheckFlip() {
+  if (Math.abs(wrapPi(Math.PI * 2) ) > 1e-6) throw new Error("wrapPi full turn");
+  const board = {
+    airTime: 0,
+    flip: 0,
+    flipRate: 0,
+    shuv: 0,
+    shuvRate: 0,
+    caught: true,
+    trick: "",
+    flickFrontX: FLICK_WINDOW,
+    flickBackX: 0,
+  };
+  stepFlip(
+    { front: { x: 0.8, y: 0 }, back: { x: 0, y: 0 }, frontXVel: 8, backXVel: 0 },
+    board,
+    FIXED_DT,
+    true,
+  );
+  if (!(board.flipRate > 0) || board.trick !== "kickflip") {
+    throw new Error("flip self-check: kickflip scoop missed");
+  }
 }
