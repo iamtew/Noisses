@@ -32,6 +32,7 @@ function grindSpec(origin, dir, halfLen, radius) {
   };
 }
 
+/** Rail runs forward (+Z) so a straight push can ollie along it. */
 function makeRail() {
   const metal = new THREE.MeshStandardMaterial({
     color: 0x9aa3ab,
@@ -44,19 +45,19 @@ function makeRail() {
   });
   const group = new THREE.Group();
   const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 5.2, 16), metal);
-  bar.rotation.z = Math.PI / 2;
-  bar.position.set(0, 0.5, 7);
+  bar.rotation.x = Math.PI / 2;
+  bar.position.set(1.7, 0.34, 5.5);
   bar.castShadow = true;
   group.add(bar);
-  for (const x of [-2.4, 2.4]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.06), paint);
-    post.position.set(x, 0.25, 7);
+  for (const z of [3.1, 7.9]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), paint);
+    post.position.set(1.7, 0.17, z);
     post.castShadow = true;
     group.add(post);
   }
   const grind = grindSpec(
-    new THREE.Vector3(0, 0.5, 7),
-    new THREE.Vector3(1, 0, 0),
+    new THREE.Vector3(1.7, 0.34, 5.5),
+    new THREE.Vector3(0, 0, 1),
     2.55,
     0.028,
   );
@@ -74,24 +75,24 @@ function makeLedge() {
     roughness: 0.4,
   });
   const group = new THREE.Group();
-  const block = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.36, 0.5), conc);
-  block.position.set(0, 0.18, 11.5);
+  const block = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.32, 4.5), conc);
+  block.position.set(-2.0, 0.16, 5.5);
   block.castShadow = true;
   block.receiveShadow = true;
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.04, 0.06), cope);
-  edge.position.set(0, 0.38, 11.28);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 4.5), cope);
+  edge.position.set(-1.75, 0.34, 5.5);
   edge.castShadow = true;
   group.add(block, edge);
   const grind = grindSpec(
-    new THREE.Vector3(0, 0.38, 11.28),
-    new THREE.Vector3(1, 0, 0),
-    2.05,
+    new THREE.Vector3(-1.75, 0.34, 5.5),
+    new THREE.Vector3(0, 0, 1),
+    2.2,
     0.04,
   );
-  return { group, grind };
+  return { group, grind, floor: block };
 }
 
-/** Flat pad plus a round rail and a coped ledge. Generated here. */
+/** Pad, a forward rail (right), a rideable ledge (left). */
 export function createEnvironment() {
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
@@ -112,11 +113,15 @@ export function createEnvironment() {
 
   const rail = makeRail();
   const ledge = makeLedge();
+  ledge.floor.updateMatrixWorld(true);
+  const ledgeBox = new THREE.Box3().setFromObject(ledge.floor);
 
   return {
     ground,
     grid,
     props: [rail.group, ledge.group],
+    floors: [ground, ledge.floor],
+    solids: [ledgeBox],
     grinds: [rail.grind, ledge.grind],
   };
 }

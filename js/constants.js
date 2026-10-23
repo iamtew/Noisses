@@ -89,11 +89,11 @@ export const FLICK_SPEED = -5;
 /** Remember a flick this long so charge+flick need not be the same frame (s). */
 export const FLICK_WINDOW = 0.16;
 
-/** Base pop impulse (N·s). Heavy board, so this is chunky. */
-export const OLLIE_IMPULSE = 240;
+/** Base pop impulse (N·s). Enough for the rail, not a launch. */
+export const OLLIE_IMPULSE = 165;
 
 /** Extra pop from flick speed, N·s per (stick-unit/s). */
-export const OLLIE_FLICK_GAIN = 8;
+export const OLLIE_FLICK_GAIN = 3;
 
 /** Foot marker travel on the deck (m). */
 export const FOOT_X = 0.07;
@@ -118,25 +118,25 @@ export const BAIL_ROLL = 0.7;
 export const BAIL_DOWN = 9;
 
 /** Extra pop if both sticks stay up after leaving the ground (N·s). */
-export const BONE_IMPULSE = 40;
+export const BONE_IMPULSE = 18;
 
 /** After pop, this long to start a flip/shuv (s). */
-export const SCOOP_WINDOW = 0.28;
+export const SCOOP_WINDOW = 0.16;
 
-/** Front stick |X| to count as a scoop. */
-export const SCOOP_X = 0.35;
+/** Front stick |X| to count as a scoop. High so an ollie Y-flick is not a flip. */
+export const SCOOP_X = 0.62;
 
 /** |stick X velocity| (units/s) that counts as a scoop flick. */
-export const SCOOP_SPEED = 4;
+export const SCOOP_SPEED = 9;
 
-/** Kick/heelflip spin (rad/s). Sign from front stick X. ~one rev in 0.4 s. */
-export const FLIP_SPIN = 16;
+/** Kick/heelflip spin (rad/s). Sign from front stick X. */
+export const FLIP_SPIN = 9;
 
 /** Shuv spin around yaw from back stick X (rad/s). */
-export const SHUV_SPIN = 10;
+export const SHUV_SPIN = 5.5;
 
-/** Spin bleed (1/s). Low so a scoop keeps rotating until catch. */
-export const FLIP_DAMP = 0.35;
+/** Spin bleed (1/s). */
+export const FLIP_DAMP = 1.4;
 
 /** Sticks inside this radius = trying to catch. */
 export const CATCH_STICK = 0.28;
@@ -145,13 +145,13 @@ export const CATCH_STICK = 0.28;
 export const CATCH_ANGLE = 0.6;
 
 /** Truck-to-rail distance that counts as contact (m). Not a magnet. */
-export const GRIND_LOCK = 0.1;
+export const GRIND_LOCK = 0.13;
 
 /** Once locked, slip off if the board drifts farther than this (m). */
-export const GRIND_SLIP = 0.18;
+export const GRIND_SLIP = 0.2;
 
 /** Need this much speed along the grind axis (m/s). */
-export const GRIND_MIN_ALONG = 1.0;
+export const GRIND_MIN_ALONG = 0.45;
 
 /** Board origin above the grind axis while locked (m). */
 export const GRIND_RIDE = 0.08;

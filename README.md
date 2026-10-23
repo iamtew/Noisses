@@ -27,7 +27,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **△ Triangle** — stick debug overlay
 - **L2** — turn left (ground and air)
 - **R2** — turn right (ground and air)
-- **Grind** — ollie so the **trucks** hit the rail or ledge. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
+- **Grind** — rail is on the **right**, ledge on the **left**, both run forward. Push, stay along them, ollie so trucks hit. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
 

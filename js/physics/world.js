@@ -42,10 +42,9 @@ const _railPt = new THREE.Vector3();
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 const _ray = new THREE.Raycaster();
 
-export function stepWorld(board, dt, input, ground, grinds = []) {
-  // Rays use matrixWorld. Identity until this runs, so the pad looks like a
-  // vertical XY plane and the board falls through the void.
-  ground.updateMatrixWorld(true);
+export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
+  const floorList = Array.isArray(floors) ? floors : [floors];
+  for (const m of floorList) m.updateMatrixWorld(true);
 
   board.prevPos.copy(board.pos);
   board.prevQuat.copy(board.quat);
@@ -115,13 +114,18 @@ export function stepWorld(board, dt, input, ground, grinds = []) {
     return;
   }
 
+  if (!board.grinding) {
+    for (const g of grinds) bumpGrindBody(board, g);
+  }
+  resolveSolids(board, solids);
+
   let grounded = false;
   let lift = 0;
   _ray.far = RAY_FAR;
   for (const w of WHEEL_LOCAL) {
     _origin.set(w.x, w.y, w.z).applyQuaternion(board.quat).add(board.pos);
     _ray.set(_origin, DOWN);
-    const hit = _ray.intersectObject(ground, false)[0];
+    const hit = _ray.intersectObjects(floorList, false)[0];
     if (!hit) continue;
     if (hit.distance <= RIDE_HEIGHT + 0.04) grounded = true;
     const need = RIDE_HEIGHT - hit.distance;
@@ -133,7 +137,7 @@ export function stepWorld(board, dt, input, ground, grinds = []) {
     _origin.y += RESCUE_RAY;
     _ray.far = RESCUE_RAY * 2;
     _ray.set(_origin, DOWN);
-    const hit = _ray.intersectObject(ground, false)[0];
+    const hit = _ray.intersectObjects(floorList, false)[0];
     if (hit) {
       const groundY = _origin.y - hit.distance;
       // Only snap up if we already tunneled. Do not glue an airborne board.
@@ -196,6 +200,53 @@ function grindName(front, back, parallel) {
   if (tail > 0.32) return "5-0";
   if (tail < -0.32) return "nosegrind";
   return "50-50";
+}
+
+function bumpGrindBody(board, grind) {
+  const hit = projectGrind(board.pos, grind);
+  const dx = board.pos.x - _railPt.x;
+  const dz = board.pos.z - _railPt.z;
+  const d = Math.hypot(dx, dz);
+  const rad = grind.radius + 0.09;
+  if (d < 1e-4 || d >= rad) return;
+  if (Math.abs(board.pos.y - grind.origin.y) > 0.28) return;
+  const push = (rad - d) / d;
+  board.pos.x += dx * push;
+  board.pos.z += dz * push;
+  const into = board.vel.x * dx + board.vel.z * dz;
+  if (into < 0) {
+    board.vel.x -= (into / (d * d)) * dx;
+    board.vel.z -= (into / (d * d)) * dz;
+  }
+}
+
+function resolveSolids(board, solids) {
+  const y = board.pos.y;
+  for (const b of solids) {
+    if (y > b.max.y - 0.01) continue;
+    if (y + 0.05 < b.min.y) continue;
+    const x = board.pos.x;
+    const z = board.pos.z;
+    if (x < b.min.x || x > b.max.x || z < b.min.z || z > b.max.z) continue;
+    const dx0 = x - b.min.x;
+    const dx1 = b.max.x - x;
+    const dz0 = z - b.min.z;
+    const dz1 = b.max.z - z;
+    const m = Math.min(dx0, dx1, dz0, dz1);
+    if (m === dx0) {
+      board.pos.x = b.min.x;
+      if (board.vel.x < 0) board.vel.x = 0;
+    } else if (m === dx1) {
+      board.pos.x = b.max.x;
+      if (board.vel.x > 0) board.vel.x = 0;
+    } else if (m === dz0) {
+      board.pos.z = b.min.z;
+      if (board.vel.z < 0) board.vel.z = 0;
+    } else {
+      board.pos.z = b.max.z;
+      if (board.vel.z > 0) board.vel.z = 0;
+    }
+  }
 }
 
 function tryLockGrind(board, grinds, front, back) {

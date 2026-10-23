@@ -23,7 +23,7 @@ const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
 const { renderer, scene, camera, sun } = setupScene(canvas);
-const { ground, grid, props, grinds } = createEnvironment();
+const { ground, grid, props, grinds, floors, solids } = createEnvironment();
 scene.add(ground);
 scene.add(grid);
 for (const p of props) scene.add(p);
@@ -33,7 +33,7 @@ const model = createBoardModel();
 scene.add(model.group);
 
 for (let i = 0; i < 240 && !board.grounded; i++) {
-  stepWorld(board, FIXED_DT, IDLE_INPUT, ground);
+  stepWorld(board, FIXED_DT, IDLE_INPUT, floors, grinds, solids);
 }
 
 const _pos = board.pos.clone();
@@ -88,7 +88,7 @@ function tick(now) {
 
     acc += frameDt;
     while (acc >= FIXED_DT) {
-      stepWorld(board, FIXED_DT, input, ground, grinds);
+      stepWorld(board, FIXED_DT, input, floors, grinds, solids);
       acc -= FIXED_DT;
     }
   } else {
