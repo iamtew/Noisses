@@ -6,7 +6,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "□  left foot push     ×  right foot push\nL2/R2  turn\nHold D-pad down  set spawn     hold D-pad up  respawn\nRail right, ledge left — skate along, then ollie\nKickflip  ollie + hard front-stick right\n○  stance     △  sticks",
+    body: "□  left foot push     ×  right foot push\nL2/R2  turn\nHold D-pad down  set spawn     hold D-pad up  respawn\nRail right, ledge left, stairs back-left, bank right\nKickflip  ollie + hard front-stick right\n○  stance     △  sticks",
   },
 };
 

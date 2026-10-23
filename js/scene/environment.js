@@ -125,7 +125,41 @@ export function createSpawnMark() {
   return { group, charge };
 }
 
-/** Pad, a forward rail (right), a rideable ledge (left). */
+function concMat(color) {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.9 });
+}
+
+/** Four treads, rideable. */
+function makeStairs() {
+  const group = new THREE.Group();
+  const floors = [];
+  const solids = [];
+  const mat = concMat(0x74787c);
+  for (let i = 0; i < 4; i++) {
+    const tread = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.15, 0.36), mat);
+    tread.position.set(-5.4, 0.075 + i * 0.15, 11.2 + i * 0.36);
+    tread.castShadow = true;
+    tread.receiveShadow = true;
+    tread.updateMatrixWorld(true);
+    group.add(tread);
+    floors.push(tread);
+    solids.push(new THREE.Box3().setFromObject(tread));
+  }
+  return { group, floors, solids };
+}
+
+/** Shallow bank you can roll. Original wedge, not a copied spot. */
+function makeBank() {
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.16, 5.2), concMat(0x7a7e82));
+  slab.rotation.x = -0.3;
+  slab.position.set(5.6, 0.72, 6.4);
+  slab.castShadow = true;
+  slab.receiveShadow = true;
+  slab.updateMatrixWorld(true);
+  return { group: slab, floor: slab };
+}
+
+/** Pad, rail right, ledge left, stairs back-left, bank right. */
 export function createEnvironment() {
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
@@ -139,22 +173,24 @@ export function createEnvironment() {
   ground.name = "ground";
   ground.receiveShadow = true;
 
-  const grid = new THREE.GridHelper(24, 24, 0x5e6266, 0x4a4e52);
+  const grid = new THREE.GridHelper(36, 36, 0x5e6266, 0x4a4e52);
   grid.position.y = 0.01;
   grid.material.transparent = true;
   grid.material.opacity = 0.35;
 
   const rail = makeRail();
   const ledge = makeLedge();
+  const stairs = makeStairs();
+  const bank = makeBank();
   ledge.floor.updateMatrixWorld(true);
   const ledgeBox = new THREE.Box3().setFromObject(ledge.floor);
 
   return {
     ground,
     grid,
-    props: [rail.group, ledge.group],
-    floors: [ground, ledge.floor],
-    solids: [ledgeBox],
+    props: [rail.group, ledge.group, stairs.group, bank.group],
+    floors: [ground, ledge.floor, bank.floor, ...stairs.floors],
+    solids: [ledgeBox, ...stairs.solids],
     grinds: [rail.grind, ledge.grind],
   };
 }
