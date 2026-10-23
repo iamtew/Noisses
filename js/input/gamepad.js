@@ -1,5 +1,7 @@
 // Poll every play frame. A valid pad has two analog sticks (four axes).
 
+import { STICK_DEADZONE } from "../constants.js";
+
 /**
  * @param {Gamepad | null | undefined} pad
  */
@@ -23,4 +25,21 @@ export function anyButtonPressed(pad) {
     if (b && b.pressed) return true;
   }
   return false;
+}
+
+function axis(pad, i) {
+  const v = pad.axes[i] || 0;
+  return Math.abs(v) < STICK_DEADZONE ? 0 : v;
+}
+
+/**
+ * Play input. Steer is both sticks' X (feet shifting sideways).
+ * Push is A / Cross (button 0).
+ */
+export function readPlayInput(pad) {
+  if (!pad) return { steer: 0, push: false };
+  return {
+    steer: (axis(pad, 0) + axis(pad, 2)) * 0.5,
+    push: Boolean(pad.buttons[0] && pad.buttons[0].pressed),
+  };
 }
