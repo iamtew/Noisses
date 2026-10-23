@@ -67,10 +67,16 @@ export function stepWorld(board, dt, input, ground) {
 
   board.vel.y -= GRAVITY * dt;
 
-  if (input.push && !board.pushLatch && board.grounded) {
-    board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
+  if (board.grounded) {
+    if (input.pushLeft && !board.pushLeftLatch) {
+      board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
+    }
+    if (input.pushRight && !board.pushRightLatch) {
+      board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
+    }
   }
-  board.pushLatch = input.push;
+  board.pushLeftLatch = Boolean(input.pushLeft);
+  board.pushRightLatch = Boolean(input.pushRight);
 
   const pop = detectPop(input, board, dt);
   if (pop > 0) board.vel.y += pop / BOARD_MASS;

@@ -12,7 +12,7 @@ export const GRAVITY = 9.81;
 /** Board + skater lump mass (kg). Heavy on purpose. */
 export const BOARD_MASS = 75;
 
-/** Impulse added along the nose when × (Cross) is pressed while grounded (N·s). */
+/** Impulse along the nose per push. □ left foot, × right foot (N·s). */
 export const PUSH_IMPULSE = 180;
 
 /** Horizontal speed cap (m/s). ~25 km/h. */

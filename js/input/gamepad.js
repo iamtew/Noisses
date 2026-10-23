@@ -11,7 +11,8 @@ const ZERO_FOOT = { x: 0, y: 0 };
 
 export const IDLE_INPUT = {
   steer: 0,
-  push: false,
+  pushLeft: false,
+  pushRight: false,
   triangle: false,
   circle: false,
   front: ZERO_FOOT,
@@ -91,7 +92,9 @@ export function readPlayInput(pad, regular, now) {
   prevTime = now;
   return {
     steer: (front.x + back.x) * 0.5,
-    push: held(pad, BTN.CROSS),
+    // □ left face = left foot, × bottom/right of that pair = right foot.
+    pushLeft: held(pad, BTN.SQUARE),
+    pushRight: held(pad, BTN.CROSS),
     triangle: held(pad, BTN.TRIANGLE),
     circle: held(pad, BTN.CIRCLE),
     front,

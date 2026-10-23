@@ -14,7 +14,8 @@ Without a two-stick gamepad you get a blocking overlay. Connect a pad, press any
 
 PlayStation face buttons. Regular stance (default): left stick = front foot, right stick = back foot.
 
-- **× Cross** — push (once per press, on the ground)
+- **□ Square** — push with the **left** foot (once per press, on the ground)
+- **× Cross** — push with the **right** foot (once per press, on the ground)
 - **Stick Y** — weight nose ↔ tail (down = tail). Board pitches with the weight.
 - **Stick X** — foot sideways (and a little steer)
 - **Ollie** — hold **R** down (tail), flick **L** up

@@ -45,7 +45,7 @@ let last = performance.now();
 function hudText() {
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
-  return `× push · L2/R2 turn · ollie R↓ L↑ · nollie L↓ R↑ · ○ ${stance} · △ sticks`;
+  return `□ left push · × right push · L2/R2 turn · ollie R↓ L↑ · nollie L↓ R↑ · ○ ${stance} · △ sticks`;
 }
 
 function tick(now) {
