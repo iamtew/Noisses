@@ -1,6 +1,13 @@
 import * as THREE from "three";
 import {
+  AIR_ROLL,
+  AIR_ROLL_DAMP,
+  AIR_YAW,
+  BAIL_DOWN,
+  BAIL_PITCH,
+  BAIL_ROLL,
   BOARD_MASS,
+  BONE_IMPULSE,
   FIXED_DT,
   GRAVITY,
   GROUND_FRICTION,
@@ -34,13 +41,22 @@ export function stepWorld(board, dt, input, ground) {
   board.prevQuat.copy(board.quat);
 
   const speed = Math.hypot(board.vel.x, board.vel.z);
-  board.yaw += input.steer * (STEER_RATE * Math.min(speed, 2) + STEER_PIVOT) * dt;
+  const airborne = !board.grounded;
+  if (airborne) {
+    board.yaw += ((input.r2 || 0) - (input.l2 || 0)) * AIR_YAW * dt;
+    board.roll += (input.steer || 0) * AIR_ROLL * dt;
+    board.roll *= Math.exp(-AIR_ROLL_DAMP * dt);
+  } else {
+    board.yaw += input.steer * (STEER_RATE * Math.min(speed, 2) + STEER_PIVOT) * dt;
+    board.roll += (0 - board.roll) * (1 - Math.exp(-PITCH_FOLLOW * dt));
+  }
 
   const front = input.front || { x: 0, y: 0 };
   const back = input.back || { x: 0, y: 0 };
   // Sticks down (+) load the tail → nose up → negative pitch (YXZ, +Z nose).
   const pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
-  board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-PITCH_FOLLOW * dt));
+  const pitchRate = airborne ? PITCH_FOLLOW * 0.25 : PITCH_FOLLOW;
+  board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-pitchRate * dt));
 
   _euler.set(board.pitch, board.yaw, board.roll);
   board.quat.setFromEuler(_euler);
@@ -55,6 +71,11 @@ export function stepWorld(board, dt, input, ground) {
 
   const pop = detectPop(input, board);
   if (pop > 0) board.vel.y += pop / BOARD_MASS;
+  if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
+    board.vel.y += BONE_IMPULSE / BOARD_MASS;
+    board.boned = true;
+  }
+  if (!airborne) board.boned = false;
 
   const hSpeed = Math.hypot(board.vel.x, board.vel.z);
   if (hSpeed > MAX_SPEED) {
@@ -95,7 +116,17 @@ export function stepWorld(board, dt, input, ground) {
     }
   }
 
+  if (grounded && !board.wasGrounded) {
+    const ugly =
+      Math.abs(board.pitch) > BAIL_PITCH ||
+      Math.abs(board.roll) > BAIL_ROLL ||
+      -board.vel.y > BAIL_DOWN;
+    if (ugly) bail(board);
+  }
+  board.wasGrounded = grounded;
   board.grounded = grounded;
+  if (board.bailed > 0) board.bailed = Math.max(0, board.bailed - dt);
+
   // Leaving the ground: skip the glue so an ollie can actually pop.
   const sticking = grounded && board.vel.y <= 0.35;
   if (lift > 0 && sticking) board.pos.y += lift;
@@ -106,6 +137,13 @@ export function stepWorld(board, dt, input, ground) {
     board.vel.z *= damp;
     board.wheelSpin += Math.hypot(board.vel.x, board.vel.z) * dt / WHEEL_RADIUS;
   }
+}
+
+function bail(board) {
+  board.vel.set(0, 0, 0);
+  board.pitch = 0;
+  board.roll = 0;
+  board.bailed = 1.2;
 }
 
 /** Fails loud if gravity integration is broken. */

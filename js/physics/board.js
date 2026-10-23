@@ -17,6 +17,9 @@ export function createBoardState() {
     triangleLatch: false,
     circleLatch: false,
     regular: true,
+    wasGrounded: true,
+    boned: false,
+    bailed: 0,
     wheelSpin: 0,
   };
 }

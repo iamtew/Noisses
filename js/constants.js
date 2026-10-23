@@ -89,3 +89,24 @@ export const OLLIE_FLICK_GAIN = 8;
 /** Foot marker travel on the deck (m). */
 export const FOOT_X = 0.07;
 export const FOOT_Z = 0.28;
+
+/** Air yaw from R2 minus L2 (rad/s at full trigger). Limited on purpose. */
+export const AIR_YAW = 1.1;
+
+/** Air roll from combined stick X (rad/s). */
+export const AIR_ROLL = 0.9;
+
+/** Roll bleed in air (1/s). */
+export const AIR_ROLL_DAMP = 1.2;
+
+/** Land steeper than this pitch (rad) → bail. ~35°. */
+export const BAIL_PITCH = 0.62;
+
+/** Land rolled past this (rad) → bail. */
+export const BAIL_ROLL = 0.7;
+
+/** Downward speed on land that always bails (m/s). */
+export const BAIL_DOWN = 9;
+
+/** Extra pop if both sticks stay up after leaving the ground (N·s). */
+export const BONE_IMPULSE = 40;

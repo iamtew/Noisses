@@ -43,8 +43,10 @@ let acc = 0;
 let last = performance.now();
 
 function hudText() {
+  if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
-  return `× push · R down + L flick up ollie · ○ stance (${stance}) · △ sticks`;
+  const air = board.grounded ? "" : " · L2/R2 air yaw";
+  return `× push · R down + L flick up ollie · ○ stance (${stance}) · △ sticks${air}`;
 }
 
 function tick(now) {

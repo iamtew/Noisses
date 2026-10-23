@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 2: board on a pad, dual-stick feet, weight pitch, ollie flick. Gamepad required.
+Phase 3: dual-stick feet, ollie, air, landing, bail. Gamepad required.
 
 ## Run locally
 
@@ -21,6 +21,8 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Nollie** — hold **L** down, flick **R** up
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
+- **L2 / R2** — yaw in the air (small)
+- Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
 
 ## Deploy (GitHub Pages)
