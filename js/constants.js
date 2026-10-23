@@ -56,20 +56,26 @@ export const STEER_RATE = 1.6;
 /** Slow pivot so you can turn almost still (rad/s per unit stick). */
 export const STEER_PIVOT = 0.9;
 
-/** Follow camera distance behind the board (m). */
-export const CAM_BACK = 2.05;
+/** Follow camera distance behind the board (m). Far enough to see the rider. */
+export const CAM_BACK = 2.45;
 
 /** Nudge right so we see deck, not a tail sliver (m). */
-export const CAM_SIDE = 0.78;
+export const CAM_SIDE = 0.85;
 
 /** Follow camera height (m). */
-export const CAM_HEIGHT = 0.78;
+export const CAM_HEIGHT = 1.05;
 
 /** Camera look-at height above deck (m). */
-export const CAM_LOOK_Y = 0.22;
+export const CAM_LOOK_Y = 0.42;
 
 /** Follow smoothing rate (1/s). Higher = snappier. */
 export const CAM_FOLLOW = 7.5;
+
+/** R1 low camera. Close to the deck, skate-video height. */
+export const CAM_LOW_BACK = 1.45;
+export const CAM_LOW_SIDE = 0.4;
+export const CAM_LOW_HEIGHT = 0.34;
+export const CAM_LOW_LOOK = 0.16;
 
 /** D-pad down/up must be held this long to set / respawn (s). Taps do nothing. */
 export const SPAWN_HOLD = 0.8;

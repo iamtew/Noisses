@@ -12,6 +12,7 @@ import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
+import { createSkater, poseSkater, selfCheckSkater } from "./scene/skaterModel.js";
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSticks } from "./ui/sticks.js";
 import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
@@ -20,6 +21,7 @@ selfCheck();
 selfCheckPop();
 selfCheckFlip();
 selfCheckAudio();
+selfCheckSkater();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
@@ -34,6 +36,8 @@ scene.add(dust.points);
 
 const board = createBoardState();
 const model = createBoardModel();
+const skater = createSkater();
+model.group.add(skater.root);
 scene.add(model.group);
 const sfx = createAudio();
 
@@ -70,6 +74,9 @@ const _quat = board.quat.clone();
 
 let playing = false;
 let stickDebug = false;
+let lowCam = false;
+let r1Latch = false;
+let camFlash = 0;
 let holdDown = 0;
 let holdUp = 0;
 let firedDown = false;
@@ -84,7 +91,7 @@ function settleBoard() {
   for (let i = 0; i < 80 && !board.grounded; i++) {
     stepWorld(board, FIXED_DT, IDLE_INPUT, floors, grinds, solids);
   }
-  followCamera(camera, board.pos, board.quat, 8, sun);
+  followCamera(camera, board.pos, board.quat, 8, sun, lowCam);
 }
 
 function setSpawnHere() {
@@ -170,6 +177,7 @@ function hudText() {
   if (holdDown > 0 && !firedDown) return `SET SPAWN  ${Math.min(99, Math.floor((holdDown / SPAWN_HOLD) * 100))}%`;
   if (holdUp > 0 && !firedUp) return `RESPAWN  ${Math.min(99, Math.floor((holdUp / SPAWN_HOLD) * 100))}%`;
   if (spawnFlash > 0) return spawnMsg;
+  if (camFlash > 0) return lowCam ? "LOW CAM" : "FOLLOW";
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
   const trick = board.grinding
@@ -202,6 +210,12 @@ function tick(now) {
   if (playing) {
     if (input.triangle && !board.triangleLatch) stickDebug = !stickDebug;
     board.triangleLatch = input.triangle;
+    if (input.r1 && !r1Latch) {
+      lowCam = !lowCam;
+      camFlash = 1.2;
+    }
+    r1Latch = input.r1;
+    if (camFlash > 0) camFlash = Math.max(0, camFlash - frameDt);
     if (input.circle && !board.circleLatch) {
       if (board.grinding) {
         board.grinding = false;
@@ -263,11 +277,12 @@ function tick(now) {
   const squash = 1 + (setT + upT) * 0.04;
   model.group.scale.set(squash, 1 - (setT + upT) * 0.06, squash);
   placeFeet(model, input.front, input.back);
+  poseSkater(skater, model, input, board, frameDt);
   for (const wheel of model.wheels) wheel.rotation.x = board.wheelSpin;
 
   sticks.set(input, board.regular, playing && stickDebug);
   dust.step(frameDt);
-  followCamera(camera, _pos, _quat, frameDt, sun);
+  followCamera(camera, _pos, _quat, frameDt, sun, lowCam);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }

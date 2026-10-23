@@ -6,7 +6,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn\nRail right · ledge left · stairs back-left · bank right\nKickflip  ollie + front stick right     ○ stance     △ sticks",
+    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn     R1  low cam\nRail right · ledge left · stairs back-left · bank right\nKickflip  ollie + front stick right     ○ stance     △ sticks",
   },
 };
 

@@ -4,6 +4,10 @@ import {
   CAM_FOLLOW,
   CAM_HEIGHT,
   CAM_LOOK_Y,
+  CAM_LOW_BACK,
+  CAM_LOW_HEIGHT,
+  CAM_LOW_LOOK,
+  CAM_LOW_SIDE,
   CAM_SIDE,
 } from "../constants.js";
 
@@ -60,20 +64,24 @@ export function setupScene(canvas) {
   return { scene, camera, renderer, sun };
 }
 
-export function followCamera(camera, pos, quat, dt, sun) {
+export function followCamera(camera, pos, quat, dt, sun, low) {
+  const back = low ? CAM_LOW_BACK : CAM_BACK;
+  const side = low ? CAM_LOW_SIDE : CAM_SIDE;
+  const height = low ? CAM_LOW_HEIGHT : CAM_HEIGHT;
+  const lookY = low ? CAM_LOW_LOOK : CAM_LOOK_Y;
   _back.set(0, 0, -1).applyQuaternion(quat);
   _back.y = 0;
   if (_back.lengthSq() < 1e-6) _back.set(0, 0, -1);
-  _back.setLength(CAM_BACK);
+  _back.setLength(back);
   _right.set(1, 0, 0).applyQuaternion(quat);
   _right.y = 0;
   if (_right.lengthSq() < 1e-6) _right.set(1, 0, 0);
   else _right.normalize();
-  _desired.copy(pos).add(_back).addScaledVector(_right, CAM_SIDE);
-  _desired.y = pos.y + CAM_HEIGHT;
+  _desired.copy(pos).add(_back).addScaledVector(_right, side);
+  _desired.y = pos.y + height;
   camera.position.lerp(_desired, 1 - Math.exp(-CAM_FOLLOW * dt));
   _look.copy(pos);
-  _look.y += CAM_LOOK_Y;
+  _look.y += lookY;
   camera.lookAt(_look);
 
   if (sun) {

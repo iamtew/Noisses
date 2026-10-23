@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 6–7: plaza pad with rail, ledge, stairs, bank. Synthesized Web Audio. Gamepad required. Concrete pad, no debug grid.
+Phase 6–7: plaza pad with rail, ledge, stairs, bank, and a rider on the deck. Synthesized Web Audio. Gamepad required.
 
 ## Run locally
 
@@ -25,6 +25,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Shuvit** — ollie, scoop **back stick** left or right.
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
+- **R1** — low camera / follow camera
 - **L2** — turn left (ground and air)
 - **R2** — turn right (ground and air)
 - **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.
