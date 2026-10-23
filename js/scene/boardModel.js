@@ -35,19 +35,24 @@ function extrudeDeck(depth, bevel) {
   return geo;
 }
 
-function truckAt(z, metal) {
+/** Hanger wider than the deck so the truck reads from the follow camera. */
+function truckAt(z, metal, bushing) {
   const g = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.055), metal);
-  base.position.y = 0.002;
-  const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.018, 0.028), metal);
-  hanger.position.y = -0.02;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.01, 0.06), metal);
+  base.position.y = -0.006;
+  const king = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.04, 8), metal);
+  king.position.y = -0.028;
+  const bush = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 10), bushing);
+  bush.position.y = -0.022;
+  const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.022, 0.032), metal);
+  hanger.position.y = -0.048;
   const axle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.005, 0.005, 0.17, 8),
+    new THREE.CylinderGeometry(0.006, 0.006, 0.24, 8),
     metal,
   );
   axle.rotation.z = Math.PI / 2;
-  axle.position.y = -0.028;
-  g.add(base, hanger, axle);
+  axle.position.y = -0.05;
+  g.add(base, king, bush, hanger, axle);
   g.position.z = z;
   g.traverse((o) => {
     if (o.isMesh) o.castShadow = true;
@@ -68,9 +73,13 @@ export function createBoardModel() {
     roughness: 0.95,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: 0x8a9098,
-    roughness: 0.35,
-    metalness: 0.65,
+    color: 0xc5ccd4,
+    roughness: 0.28,
+    metalness: 0.8,
+  });
+  const bushing = new THREE.MeshStandardMaterial({
+    color: 0x2a6b3f,
+    roughness: 0.7,
   });
   const urethane = new THREE.MeshStandardMaterial({
     color: 0xd8c4a0,
@@ -84,11 +93,11 @@ export function createBoardModel() {
   tape.castShadow = true;
   group.add(deck, tape);
 
-  group.add(truckAt(0.205, metal));
-  group.add(truckAt(-0.205, metal));
+  group.add(truckAt(0.205, metal, bushing));
+  group.add(truckAt(-0.205, metal, bushing));
 
   const wheels = [];
-  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.034, 18);
+  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.036, 18);
   for (const w of WHEEL_LOCAL) {
     const wheel = new THREE.Mesh(geo, urethane);
     wheel.rotation.z = Math.PI / 2;

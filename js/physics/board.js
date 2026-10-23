@@ -32,6 +32,8 @@ export function createBoardState() {
     trick: "",
     flickFrontX: 0,
     flickBackX: 0,
+    grinding: false,
+    grind: null,
     wheelSpin: 0,
   };
 }

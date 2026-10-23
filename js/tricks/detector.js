@@ -40,7 +40,7 @@ export function wrapPi(a) {
  */
 export function detectPop(input, board, dt = FIXED_DT) {
   rememberFlick(board, input, dt);
-  if (!board.grounded) return 0;
+  if (!board.grounded && !board.grinding) return 0;
 
   const ollie =
     input.back.y > TAIL_HOLD &&

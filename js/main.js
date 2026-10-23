@@ -23,9 +23,10 @@ const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
 const { renderer, scene, camera, sun } = setupScene(canvas);
-const { ground, grid } = createEnvironment();
+const { ground, grid, props, grinds } = createEnvironment();
 scene.add(ground);
 scene.add(grid);
+for (const p of props) scene.add(p);
 
 const board = createBoardState();
 const model = createBoardModel();
@@ -46,9 +47,11 @@ let last = performance.now();
 function hudText() {
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
-  const trick = board.trick && !board.grounded
-    ? ` · ${board.trick}${board.caught ? " caught" : ""}`
-    : "";
+  const trick = board.grinding
+    ? ` · ${board.trick} grind`
+    : board.trick && !board.grounded
+      ? ` · ${board.trick}${board.caught ? " caught" : ""}`
+      : "";
   return `□/× push · L2/R2 turn · ollie then front-stick L/R flip · ○ ${stance} · △ sticks${trick}`;
 }
 
@@ -72,14 +75,20 @@ function tick(now) {
   if (playing) {
     if (input.triangle && !board.triangleLatch) stickDebug = !stickDebug;
     board.triangleLatch = input.triangle;
-    if (input.circle && !board.circleLatch && board.grounded) {
-      board.regular = !board.regular;
+    if (input.circle && !board.circleLatch) {
+      if (board.grinding) {
+        board.grinding = false;
+        board.grind = null;
+        board.vel.set(0, 0, 0);
+        board.bailed = 1.2;
+      }
+      else if (board.grounded) board.regular = !board.regular;
     }
     board.circleLatch = input.circle;
 
     acc += frameDt;
     while (acc >= FIXED_DT) {
-      stepWorld(board, FIXED_DT, input, ground);
+      stepWorld(board, FIXED_DT, input, ground, grinds);
       acc -= FIXED_DT;
     }
   } else {

@@ -35,10 +35,16 @@ export const RESCUE_RAY = 8;
 
 /** Local wheel attach points (x right, y up, z nose). */
 export const WHEEL_LOCAL = [
-  { x: 0.085, y: 0, z: 0.205 },
-  { x: -0.085, y: 0, z: 0.205 },
-  { x: 0.085, y: 0, z: -0.205 },
-  { x: -0.085, y: 0, z: -0.205 },
+  { x: 0.115, y: 0, z: 0.205 },
+  { x: -0.115, y: 0, z: 0.205 },
+  { x: 0.115, y: 0, z: -0.205 },
+  { x: -0.115, y: 0, z: -0.205 },
+];
+
+/** Front / back truck centers for grind tests (local). */
+export const TRUCK_LOCAL = [
+  { x: 0, y: -0.05, z: 0.205 },
+  { x: 0, y: -0.05, z: -0.205 },
 ];
 
 /** Visual wheel radius (m). */
@@ -137,3 +143,18 @@ export const CATCH_STICK = 0.28;
 
 /** Land/catch if flip (or shuv) is this close to a full turn, rad. ~35°. */
 export const CATCH_ANGLE = 0.6;
+
+/** Truck-to-rail distance that counts as contact (m). Not a magnet. */
+export const GRIND_LOCK = 0.1;
+
+/** Once locked, slip off if the board drifts farther than this (m). */
+export const GRIND_SLIP = 0.18;
+
+/** Need this much speed along the grind axis (m/s). */
+export const GRIND_MIN_ALONG = 1.0;
+
+/** Board origin above the grind axis while locked (m). */
+export const GRIND_RIDE = 0.08;
+
+/** Slide friction on a grind (1/s). */
+export const GRIND_FRICTION = 0.2;

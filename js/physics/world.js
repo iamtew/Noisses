@@ -11,6 +11,11 @@ import {
   BONE_IMPULSE,
   FIXED_DT,
   GRAVITY,
+  GRIND_FRICTION,
+  GRIND_LOCK,
+  GRIND_MIN_ALONG,
+  GRIND_RIDE,
+  GRIND_SLIP,
   GROUND_FRICTION,
   LANDING_DAMP,
   MAX_SPEED,
@@ -22,6 +27,7 @@ import {
   RIDE_HEIGHT,
   STEER_PIVOT,
   STEER_RATE,
+  TRUCK_LOCAL,
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
@@ -30,10 +36,13 @@ import { detectPop, stepFlip, wrapPi } from "../tricks/detector.js";
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
 const _forward = new THREE.Vector3();
+const _truck = new THREE.Vector3();
+const _to = new THREE.Vector3();
+const _railPt = new THREE.Vector3();
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 const _ray = new THREE.Raycaster();
 
-export function stepWorld(board, dt, input, ground) {
+export function stepWorld(board, dt, input, ground, grinds = []) {
   // Rays use matrixWorld. Identity until this runs, so the pad looks like a
   // vertical XY plane and the board falls through the void.
   ground.updateMatrixWorld(true);
@@ -70,7 +79,7 @@ export function stepWorld(board, dt, input, ground) {
   }
   if (!airborne) board.boned = false;
 
-  stepFlip(input, board, dt, airborne);
+  if (!board.grinding) stepFlip(input, board, dt, airborne);
   _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
@@ -96,6 +105,15 @@ export function stepWorld(board, dt, input, ground) {
   }
 
   board.pos.addScaledVector(board.vel, dt);
+
+  if (!board.grinding) tryLockGrind(board, grinds, front, back);
+  if (board.grinding) {
+    stepGrind(board, dt, front, back);
+    board.wasGrounded = false;
+    board.grounded = false;
+    if (board.bailed > 0) board.bailed = Math.max(0, board.bailed - dt);
+    return;
+  }
 
   let grounded = false;
   let lift = 0;
@@ -153,6 +171,69 @@ export function stepWorld(board, dt, input, ground) {
   }
 }
 
+function projectGrind(pos, grind) {
+  _to.copy(pos).sub(grind.origin);
+  let t = _to.dot(grind.dir);
+  const atEnd = Math.abs(t) >= grind.halfLen - 0.04;
+  t = Math.max(-grind.halfLen, Math.min(grind.halfLen, t));
+  _railPt.copy(grind.dir).multiplyScalar(t).add(grind.origin);
+  return { atEnd, dist: pos.distanceTo(_railPt) };
+}
+
+function nearestTruckDist(board, grind) {
+  let best = Infinity;
+  for (const tr of TRUCK_LOCAL) {
+    _truck.set(tr.x, tr.y, tr.z).applyQuaternion(board.quat).add(board.pos);
+    const hit = projectGrind(_truck, grind);
+    if (hit.dist < best) best = hit.dist;
+  }
+  return best;
+}
+
+function grindName(front, back, parallel) {
+  const tail = 0.5 * (front.y + back.y);
+  if (parallel < 0.45) return front.x + back.x > 0 ? "lipslide" : "boardslide";
+  if (tail > 0.32) return "5-0";
+  if (tail < -0.32) return "nosegrind";
+  return "50-50";
+}
+
+function tryLockGrind(board, grinds, front, back) {
+  if (board.grounded) return;
+  if (!board.caught && Math.abs(board.flip) > 0.45) return;
+  for (const g of grinds) {
+    if (nearestTruckDist(board, g) > GRIND_LOCK) continue;
+    if (Math.abs(board.vel.dot(g.dir)) < GRIND_MIN_ALONG) continue;
+    board.grinding = true;
+    board.grind = g;
+    board.trick = grindName(front, back, Math.abs(_forward.dot(g.dir)));
+    return;
+  }
+}
+
+function stepGrind(board, dt, front, back) {
+  const g = board.grind;
+  if (board.vel.y > 0.45) {
+    board.grinding = false;
+    board.grind = null;
+    return;
+  }
+  const hit = projectGrind(board.pos, g);
+  if (hit.atEnd || hit.dist > GRIND_SLIP) {
+    board.grinding = false;
+    board.grind = null;
+    return;
+  }
+  board.pos.x = _railPt.x;
+  board.pos.z = _railPt.z;
+  board.pos.y = g.origin.y + GRIND_RIDE;
+  const along = board.vel.dot(g.dir);
+  board.vel.copy(g.dir).multiplyScalar(along);
+  board.vel.y = 0;
+  board.vel.multiplyScalar(Math.exp(-GRIND_FRICTION * dt));
+  board.trick = grindName(front, back, Math.abs(_forward.dot(g.dir)));
+}
+
 function bail(board) {
   board.vel.set(0, 0, 0);
   board.pitch = 0;
@@ -163,6 +244,8 @@ function bail(board) {
   board.shuvRate = 0;
   board.caught = true;
   board.trick = "";
+  board.grinding = false;
+  board.grind = null;
   board.bailed = 1.2;
 }
 
