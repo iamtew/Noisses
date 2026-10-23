@@ -10,7 +10,7 @@ import {
 import { applySpawn, createBoardState, poseAt } from "./physics/board.js";
 import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
-import { createEnvironment, createSpawnMark } from "./scene/environment.js";
+import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSticks } from "./ui/sticks.js";
@@ -26,10 +26,11 @@ const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
 const { renderer, scene, camera, sun } = setupScene(canvas);
-const { ground, grid, props, grinds, floors, solids } = createEnvironment();
+const { ground, props, grinds, floors, solids } = createEnvironment();
 scene.add(ground);
-scene.add(grid);
 for (const p of props) scene.add(p);
+const dust = createDust();
+scene.add(dust.points);
 
 const board = createBoardState();
 const model = createBoardModel();
@@ -176,7 +177,7 @@ function hudText() {
     : board.trick && !board.grounded
       ? ` · ${board.trick}${board.caught ? " caught" : ""}`
       : "";
-  return `□/× push · L2/R2 turn · hold ↓ set spawn · hold ↑ respawn · ○ ${stance} · △ sticks${trick}`;
+  return `${stance}${trick}`;
 }
 
 function tick(now) {
@@ -226,11 +227,15 @@ function tick(now) {
         ((input.pushLeft && !board.pushLeftLatch) ||
           (input.pushRight && !board.pushRightLatch));
       stepWorld(board, FIXED_DT, input, floors, grinds, solids);
-      if (willPush) sfx.push();
+      if (willPush) {
+        sfx.push();
+        dust.burst(board.pos, 0.7);
+      }
       if (!board.grounded && wasGrounded && board.vel.y > 0.35) sfx.pop();
       if (board.grounded && !wasGrounded) {
         if (board.bailed > 0 && wasBailed <= 0) sfx.bail();
         else sfx.land(-vy);
+        dust.burst(board.pos, 0.5 + Math.min(1.2, Math.abs(vy) * 0.25));
       }
       acc -= FIXED_DT;
     }
@@ -261,6 +266,7 @@ function tick(now) {
   for (const wheel of model.wheels) wheel.rotation.x = board.wheelSpin;
 
   sticks.set(input, board.regular, playing && stickDebug);
+  dust.step(frameDt);
   followCamera(camera, _pos, _quat, frameDt, sun);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

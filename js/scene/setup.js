@@ -18,35 +18,35 @@ export function setupScene(canvas) {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const bg = new THREE.Color(0x8a96a3);
+  const bg = new THREE.Color(0x8b9aaa);
   scene.background = bg;
-  scene.fog = new THREE.Fog(0x8a96a3, 18, 70);
+  scene.fog = new THREE.Fog(0x8b9aaa, 22, 85);
 
   const camera = new THREE.PerspectiveCamera(
-    55,
+    58,
     window.innerWidth / window.innerHeight,
-    0.1,
+    0.08,
     250,
   );
   camera.position.set(CAM_SIDE, CAM_HEIGHT, -CAM_BACK);
 
-  scene.add(new THREE.HemisphereLight(0xc5d4e2, 0x4a453e, 0.7));
-  const sun = new THREE.DirectionalLight(0xfff1dd, 1.15);
+  scene.add(new THREE.HemisphereLight(0xd4e0ec, 0x6e6860, 0.88));
+  const sun = new THREE.DirectionalLight(0xfff1dd, 1.22);
   sun.position.set(8, 14, 6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 40;
-  sun.shadow.camera.left = -10;
-  sun.shadow.camera.right = 10;
-  sun.shadow.camera.top = 10;
-  sun.shadow.camera.bottom = -10;
-  sun.shadow.bias = -0.0004;
+  sun.shadow.camera.far = 48;
+  sun.shadow.camera.left = -14;
+  sun.shadow.camera.right = 14;
+  sun.shadow.camera.top = 14;
+  sun.shadow.camera.bottom = -14;
+  sun.shadow.bias = -0.00035;
   scene.add(sun);
   scene.add(sun.target);
 

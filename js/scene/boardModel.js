@@ -1,6 +1,29 @@
 import * as THREE from "three";
 import { FOOT_X, FOOT_Z, WHEEL_LOCAL, WHEEL_RADIUS } from "../constants.js";
 
+function gritMap() {
+  const s = 64;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#1a1c1f";
+  ctx.fillRect(0, 0, s, s);
+  const img = ctx.getImageData(0, 0, s, s);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 28;
+    d[i] += n;
+    d[i + 1] += n;
+    d[i + 2] += n;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 14);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** Popsicle outline: parallel rails, rounded nose and tail. Original geometry. */
 function popsicleShape() {
   const halfW = 0.102;
@@ -69,8 +92,9 @@ export function createBoardModel() {
     roughness: 0.72,
   });
   const grip = new THREE.MeshStandardMaterial({
+    map: gritMap(),
     color: 0x1a1c1f,
-    roughness: 0.95,
+    roughness: 0.98,
   });
   const metal = new THREE.MeshStandardMaterial({
     color: 0xc5ccd4,

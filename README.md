@@ -2,7 +2,7 @@
 
 Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
 
-Phase 6–7: plaza pad with rail, ledge, stairs, bank. Synthesized Web Audio. Gamepad required.
+Phase 6–7: plaza pad with rail, ledge, stairs, bank. Synthesized Web Audio. Gamepad required. Concrete pad, no debug grid.
 
 ## Run locally
 
