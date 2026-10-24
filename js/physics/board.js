@@ -34,6 +34,7 @@ export function createBoardState() {
     flickBackX: 0,
     grinding: false,
     grind: null,
+    sliding: false,
     manual: "",
     balance: 0,
     manualPhase: 0,
@@ -60,6 +61,7 @@ export function applySpawn(board, spawn) {
   board.wasGrounded = false;
   board.grinding = false;
   board.grind = null;
+  board.sliding = false;
   board.manual = "";
   board.balance = 0;
   board.manualCharge = 0;

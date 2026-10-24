@@ -17,6 +17,8 @@ import {
   GRIND_RIDE,
   GRIND_SLIP,
   GROUND_FRICTION,
+  SLIDE_FRICTION,
+  SLIDE_YAW,
   LANDING_DAMP,
   MAX_SPEED,
   MANUAL_PITCH,
@@ -32,7 +34,7 @@ import {
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
-import { detectPop, stepFlip, stepManual, wrapPi } from "../tricks/detector.js";
+import { detectPop, feetSplit, stepFlip, stepManual, wrapPi } from "../tricks/detector.js";
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
@@ -113,6 +115,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   if (!board.grinding) tryLockGrind(board, grinds, front, back);
   if (board.grinding) {
     stepGrind(board, dt, front, back);
+    board.sliding = false;
     board.wasGrounded = false;
     board.grounded = false;
     if (board.bailed > 0) board.bailed = Math.max(0, board.bailed - dt);
@@ -171,12 +174,17 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   // Leaving the ground: skip the glue so an ollie can actually pop.
   const sticking = grounded && board.vel.y <= 0.35;
   if (lift > 0 && sticking) board.pos.y += lift;
+  board.sliding = sticking && !board.manual && feetSplit(front, back);
+  if (board.sliding) board.yaw += Math.sign(front.y - back.y) * SLIDE_YAW * dt;
   if (sticking) {
     if (board.vel.y < 0) board.vel.y *= LANDING_DAMP;
-    const damp = Math.exp(-GROUND_FRICTION * dt);
+    const friction = GROUND_FRICTION + (board.sliding ? SLIDE_FRICTION : 0);
+    const damp = Math.exp(-friction * dt);
     board.vel.x *= damp;
     board.vel.z *= damp;
     board.wheelSpin += Math.hypot(board.vel.x, board.vel.z) * dt / WHEEL_RADIUS;
+  } else {
+    board.sliding = false;
   }
 }
 
@@ -302,6 +310,7 @@ function bail(board) {
   board.trick = "";
   board.grinding = false;
   board.grind = null;
+  board.sliding = false;
   board.manual = "";
   board.balance = 0;
   board.manualCharge = 0;

@@ -24,6 +24,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Heelflip** — ollie, scoop **front stick left**. Catch the same way.
 - **Shuvit** — ollie, scoop **back stick** left or right.
 - **Manual** — while rolling, hold one foot down and keep the other near center. Back foot is a tail manual, front foot a nose manual. The heavy foot balances it. Let go to drop out. Fall over and you bail.
+- **Powerslide** — one foot toward the nose and the other toward the tail. Speed scrubs off and the board pivots.
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
 - **R1** — low camera / follow camera

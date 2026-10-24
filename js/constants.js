@@ -21,6 +21,15 @@ export const MAX_SPEED = 7;
 /** Exponential friction when wheels are on the ground (1/s). */
 export const GROUND_FRICTION = 0.55;
 
+/** Feet this far apart on Y (one nose, one tail) counts as a powerslide. */
+export const SLIDE_SPLIT = 0.38;
+
+/** Extra slowdown while powersliding (1/s), on top of ground friction. */
+export const SLIDE_FRICTION = 3.4;
+
+/** Yaw while the feet are split (rad/s). The board pivots as it scrubs. */
+export const SLIDE_YAW = 1.5;
+
 /** Extra damping on vertical slam into the ground. */
 export const LANDING_DAMP = 0.15;
 

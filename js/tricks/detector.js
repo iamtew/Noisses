@@ -8,6 +8,7 @@ import {
   MANUAL_ENTER,
   MANUAL_HOLD,
   MANUAL_SPEED,
+  SLIDE_SPLIT,
   FLICK_SPEED,
   FLICK_UP,
   FLICK_WINDOW,
@@ -216,6 +217,18 @@ export function stepManual(board, input, dt, grounded, speed) {
   const wander = Math.sin(board.manualPhase * 1.7) * MANUAL_DRIFT;
   board.balance += (wander - (stick - MANUAL_HOLD) * MANUAL_CORRECT) * dt;
   return Math.abs(board.balance) > 1;
+}
+
+/** One foot toward the nose and the other toward the tail. */
+export function feetSplit(front, back) {
+  const yf = front?.y || 0;
+  const yb = back?.y || 0;
+  return (yf > SLIDE_SPLIT && yb < -SLIDE_SPLIT) || (yb > SLIDE_SPLIT && yf < -SLIDE_SPLIT);
+}
+
+export function selfCheckSlide() {
+  if (feetSplit({ y: 0 }, { y: 0 })) throw new Error("slide self-check: centered feet");
+  if (!feetSplit({ y: 0.6 }, { y: -0.6 })) throw new Error("slide self-check: split feet");
 }
 
 export function selfCheckManual() {

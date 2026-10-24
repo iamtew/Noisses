@@ -16,12 +16,13 @@ import { createSkater, placeSkater, poseSkater, selfCheckSkater } from "./scene/
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
-import { selfCheckFlip, selfCheckManual, selfCheckPop } from "./tricks/detector.js";
+import { selfCheckFlip, selfCheckManual, selfCheckPop, selfCheckSlide } from "./tricks/detector.js";
 
 selfCheck();
 selfCheckPop();
 selfCheckFlip();
 selfCheckManual();
+selfCheckSlide();
 selfCheckAudio();
 selfCheckSkater();
 selfCheckTune();
@@ -194,11 +195,13 @@ function hudText() {
   const stance = board.regular ? "regular" : "goofy";
   const trick = board.grinding
     ? ` · ${board.trick} grind`
-    : board.manual
-      ? ` · ${board.manual} manual`
-      : board.trick && !board.grounded
-        ? ` · ${board.trick}${board.caught ? " caught" : ""}`
-        : "";
+    : board.sliding
+      ? " · slide"
+      : board.manual
+        ? ` · ${board.manual} manual`
+        : board.trick && !board.grounded
+          ? ` · ${board.trick}${board.caught ? " caught" : ""}`
+          : "";
   return `${stance}${trick}`;
 }
 
@@ -279,13 +282,14 @@ function tick(now) {
     while (acc >= FIXED_DT) {
       const wasGrounded = board.grounded;
       const wasBailed = board.bailed;
+      const wasSliding = board.sliding;
       const vy = board.vel.y;
       const willPush =
         board.grounded &&
         ((input.pushLeft && !board.pushLeftLatch) ||
           (input.pushRight && !board.pushRightLatch));
       stepWorld(board, FIXED_DT, input, floors, grinds, solids);
-      if (willPush) {
+      if (willPush || (board.sliding && !wasSliding)) {
         sfx.push();
         dust.burst(board.pos, 0.7);
       }
