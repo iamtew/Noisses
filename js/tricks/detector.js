@@ -2,6 +2,12 @@ import {
   CATCH_ANGLE,
   CATCH_STICK,
   FIXED_DT,
+  MANUAL_CENTER,
+  MANUAL_CORRECT,
+  MANUAL_DRIFT,
+  MANUAL_ENTER,
+  MANUAL_HOLD,
+  MANUAL_SPEED,
   FLICK_SPEED,
   FLICK_UP,
   FLICK_WINDOW,
@@ -161,6 +167,74 @@ export function stepFlip(input, board, dt, airborne) {
       board.caught = true;
     }
   }
+}
+
+/**
+ * Tail manual: back foot down, front foot centered.
+ * Nose manual: the other way. Balance wanders; the heavy foot corrects it.
+ * Returns true when the manual falls over.
+ */
+export function stepManual(board, input, dt, grounded, speed) {
+  const front = input.front || { x: 0, y: 0 };
+  const back = input.back || { x: 0, y: 0 };
+  if (!grounded || board.grinding || board.bailed > 0 || speed < MANUAL_SPEED * 0.45) {
+    board.manual = "";
+    board.manualCharge = 0;
+    board.balance = 0;
+    return false;
+  }
+
+  const tail = back.y > MANUAL_HOLD && Math.abs(front.y) < MANUAL_CENTER;
+  const nose = front.y > MANUAL_HOLD && Math.abs(back.y) < MANUAL_CENTER;
+  const want = tail && !nose ? "tail" : nose && !tail ? "nose" : "";
+
+  if (!board.manual) {
+    if (!want) {
+      board.manualCharge = 0;
+      return false;
+    }
+    board.manualCharge = (board.manualCharge || 0) + dt;
+    if (board.manualCharge < MANUAL_ENTER || speed < MANUAL_SPEED) return false;
+    board.manual = want;
+    board.balance = 0;
+    board.trick = `${want} manual`;
+    return false;
+  }
+
+  if (!want) {
+    board.manual = "";
+    board.manualCharge = 0;
+    board.balance = 0;
+    if (board.trick.endsWith("manual")) board.trick = "";
+    return false;
+  }
+
+  board.manual = want;
+  board.trick = `${want} manual`;
+  board.manualPhase = (board.manualPhase || 0) + dt;
+  const stick = want === "tail" ? back.y : front.y;
+  const wander = Math.sin(board.manualPhase * 1.7) * MANUAL_DRIFT;
+  board.balance += (wander - (stick - MANUAL_HOLD) * MANUAL_CORRECT) * dt;
+  return Math.abs(board.balance) > 1;
+}
+
+export function selfCheckManual() {
+  const board = {
+    grinding: false,
+    bailed: 0,
+    manual: "",
+    balance: 0,
+    manualPhase: 0,
+    manualCharge: 0,
+    trick: "",
+  };
+  const idle = { front: { x: 0, y: 0 }, back: { x: 0, y: 0 } };
+  if (stepManual(board, idle, 0.2, true, 3)) throw new Error("manual self-check: idle fell");
+  if (board.manual) throw new Error("manual self-check: idle locked");
+
+  const tail = { front: { x: 0, y: 0 }, back: { x: 0, y: 0.8 } };
+  stepManual(board, tail, MANUAL_ENTER, true, 3);
+  if (board.manual !== "tail") throw new Error("manual self-check: tail did not lock");
 }
 
 export function selfCheckFlip() {

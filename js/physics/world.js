@@ -19,6 +19,7 @@ import {
   GROUND_FRICTION,
   LANDING_DAMP,
   MAX_SPEED,
+  MANUAL_PITCH,
   PITCH_FOLLOW,
   PITCH_MAX,
   PUSH_IMPULSE,
@@ -31,7 +32,7 @@ import {
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
-import { detectPop, stepFlip, wrapPi } from "../tricks/detector.js";
+import { detectPop, stepFlip, stepManual, wrapPi } from "../tricks/detector.js";
 
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
@@ -65,10 +66,14 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
     board.yaw += input.steer * turn * dt;
     board.roll += (0 - board.roll) * (1 - Math.exp(-PITCH_FOLLOW * dt));
   }
+  const fell = stepManual(board, input, dt, !airborne, speed);
+  if (fell) bail(board);
   // Sticks down (+) load the tail → nose up → negative pitch (YXZ, +Z nose).
-  const pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
+  let pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
+  if (board.manual === "tail") pitchTarget = -(MANUAL_PITCH + board.balance * 0.12);
+  if (board.manual === "nose") pitchTarget = MANUAL_PITCH + board.balance * 0.12;
   const pitchRate = airborne ? PITCH_FOLLOW * 0.25 : PITCH_FOLLOW;
-  board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-pitchRate * dt));
+  if (!fell) board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-pitchRate * dt));
 
   const pop = detectPop(input, board, dt);
   if (pop > 0) board.vel.y += pop / BOARD_MASS;
@@ -297,6 +302,9 @@ function bail(board) {
   board.trick = "";
   board.grinding = false;
   board.grind = null;
+  board.manual = "";
+  board.balance = 0;
+  board.manualCharge = 0;
   board.bailed = 1.2;
 }
 

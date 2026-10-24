@@ -111,6 +111,23 @@ export const PITCH_MAX = 0.32;
 /** How fast pitch chases stick weight (1/s). */
 export const PITCH_FOLLOW = 12;
 
+/** One foot this far down, the other near center, and you are in a manual. */
+export const MANUAL_HOLD = 0.42;
+export const MANUAL_CENTER = 0.22;
+
+/** Need this much speed (m/s) to lock a manual. */
+export const MANUAL_SPEED = 1.1;
+
+/** Nose-up angle while holding a tail manual (rad). */
+export const MANUAL_PITCH = 0.42;
+
+/** How fast the balance wanders, and how hard the heavy foot corrects it. */
+export const MANUAL_DRIFT = 0.65;
+export const MANUAL_CORRECT = 1.6;
+
+/** Hold the pose this long before the manual locks (s). */
+export const MANUAL_ENTER = 0.1;
+
 /** Charge stick Y (down = +) to load tail / nollie reverse. */
 export const TAIL_HOLD = 0.28;
 

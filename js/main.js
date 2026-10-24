@@ -16,11 +16,12 @@ import { createSkater, placeSkater, poseSkater, selfCheckSkater } from "./scene/
 import { bindOverlay } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
-import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
+import { selfCheckFlip, selfCheckManual, selfCheckPop } from "./tricks/detector.js";
 
 selfCheck();
 selfCheckPop();
 selfCheckFlip();
+selfCheckManual();
 selfCheckAudio();
 selfCheckSkater();
 selfCheckTune();
@@ -193,9 +194,11 @@ function hudText() {
   const stance = board.regular ? "regular" : "goofy";
   const trick = board.grinding
     ? ` · ${board.trick} grind`
-    : board.trick && !board.grounded
-      ? ` · ${board.trick}${board.caught ? " caught" : ""}`
-      : "";
+    : board.manual
+      ? ` · ${board.manual} manual`
+      : board.trick && !board.grounded
+        ? ` · ${board.trick}${board.caught ? " caught" : ""}`
+        : "";
   return `${stance}${trick}`;
 }
 
