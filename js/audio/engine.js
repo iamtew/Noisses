@@ -171,6 +171,10 @@ export function createAudio() {
       const c = ensure();
       if (c && c.state === "suspended") c.resume();
     },
+    setVolume(v) {
+      if (!master || !ctx) return;
+      master.gain.setTargetAtTime(Math.max(0, v), ctx.currentTime, 0.04);
+    },
     tick(speed, grounded, grinding, flipRate) {
       if (!ctx || ctx.state !== "running") return;
       const t = ctx.currentTime;

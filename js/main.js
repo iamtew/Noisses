@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { FIXED_DT, SPAWN_HOLD } from "./constants.js";
+import { FIXED_DT, MENU_HOLD, SPAWN_HOLD, selfCheckTune } from "./constants.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -14,6 +14,7 @@ import { createDust, createEnvironment, createSpawnMark } from "./scene/environm
 import { followCamera, setupScene } from "./scene/setup.js";
 import { createSkater, placeSkater, poseSkater, selfCheckSkater } from "./scene/skaterModel.js";
 import { bindOverlay } from "./ui/overlay.js";
+import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
 import { selfCheckFlip, selfCheckPop } from "./tricks/detector.js";
 
@@ -22,6 +23,7 @@ selfCheckPop();
 selfCheckFlip();
 selfCheckAudio();
 selfCheckSkater();
+selfCheckTune();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
@@ -41,6 +43,7 @@ skater.root.add(model.frontFoot, model.backFoot);
 scene.add(model.group);
 scene.add(skater.root);
 const sfx = createAudio();
+const menu = bindSettings(document.getElementById("menu"), (v) => sfx.setVolume(v));
 
 const spawnMark = createSpawnMark();
 scene.add(spawnMark.group);
@@ -78,6 +81,12 @@ let stickDebug = false;
 let lowCam = false;
 let r1Latch = false;
 let camFlash = 0;
+let optHold = 0;
+let optOpened = false;
+let optWas = false;
+let menuUp = false;
+let menuDown = false;
+let menuCross = false;
 let holdDown = 0;
 let holdUp = 0;
 let firedDown = false;
@@ -175,6 +184,7 @@ function paintCharge(dt) {
 }
 
 function hudText() {
+  if (!menu.isOpen() && optHold > 0) return `SETTINGS  ${Math.min(99, Math.floor((optHold / MENU_HOLD) * 100))}%`;
   if (holdDown > 0 && !firedDown) return `SET SPAWN  ${Math.min(99, Math.floor((holdDown / SPAWN_HOLD) * 100))}%`;
   if (holdUp > 0 && !firedUp) return `RESPAWN  ${Math.min(99, Math.floor((holdUp / SPAWN_HOLD) * 100))}%`;
   if (spawnFlash > 0) return spawnMsg;
@@ -208,7 +218,37 @@ function tick(now) {
   hud.hidden = !playing;
 
   const input = playing ? readPlayInput(pad, board.regular, now) : IDLE_INPUT;
-  if (playing) {
+  if (playing && !menu.isOpen() && input.options) {
+    optHold += frameDt;
+    if (optHold >= MENU_HOLD && !optOpened) {
+      menu.show();
+      optOpened = true;
+      acc = 0;
+    }
+  } else if (!input.options) {
+    optHold = 0;
+    optOpened = false;
+  }
+
+  if (playing && menu.isOpen()) {
+    if (input.options && !optWas && !optOpened) menu.hide();
+    if (input.circle && !board.circleLatch) menu.hide();
+    board.circleLatch = input.circle;
+    if (input.dpadUp && !menuUp) menu.move(-1);
+    if (input.dpadDown && !menuDown) menu.move(1);
+    menuUp = input.dpadUp;
+    menuDown = input.dpadDown;
+    let dir = input.lx;
+    if (input.dpadLeft) dir -= 1;
+    if (input.dpadRight) dir += 1;
+    if (dir) menu.nudge(dir, frameDt);
+    if (input.pushRight && !menuCross) menu.confirm();
+    menuCross = input.pushRight;
+    sfx.tick(0, false, false, 0);
+    acc = 0;
+    board.prevPos.copy(board.pos);
+    board.prevQuat.copy(board.quat);
+  } else if (playing) {
     if (input.triangle && !board.triangleLatch) stickDebug = !stickDebug;
     board.triangleLatch = input.triangle;
     if (input.r1 && !r1Latch) {
@@ -264,6 +304,7 @@ function tick(now) {
     board.prevPos.copy(board.pos);
     board.prevQuat.copy(board.quat);
   }
+  optWas = input.options;
 
   hud.textContent = hudText();
 

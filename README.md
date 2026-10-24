@@ -26,6 +26,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **○ Circle** — toggle Regular / Goofy (on the ground)
 - **△ Triangle** — stick debug overlay
 - **R1** — low camera / follow camera
+- **Hold Options** — settings (pop, flip, shuv, grind friction, push, steer, turn, volume). D-pad or left stick adjusts. ○ or Options closes. Saved in the browser.
 - **L2** — turn left (ground and air)
 - **R2** — turn right (ground and air)
 - **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.
