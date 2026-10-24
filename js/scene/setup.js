@@ -29,7 +29,7 @@ export function setupScene(canvas) {
   const scene = new THREE.Scene();
   const bg = new THREE.Color(0x8b9aaa);
   scene.background = bg;
-  scene.fog = new THREE.Fog(0x8b9aaa, 40, 150);
+  scene.fog = new THREE.Fog(0x8b9aaa, 80, 230);
 
   const camera = new THREE.PerspectiveCamera(
     58,

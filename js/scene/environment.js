@@ -41,7 +41,7 @@ function brickMap() {
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(18, 18);
+  tex.repeat.set(32, 32);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
@@ -144,10 +144,12 @@ export function createDust() {
 /**
  * Embarcadero Plaza, San Francisco, cropped so it can be skated.
  * +Z is east, toward the bay. +X is north.
- * Facts used: Market meets the plaza on the west, the brick bowl is sunken,
- * the fountain sits at the northeast, Sue Bierman Park is north, the
- * Embarcadero and the Ferry Building are east. About 4 acres in real life.
- * The fountain tubes are ours, inside the real footprint, not a trace of the sculpture.
+ * Facing +Z, +X is on the left, which is north when you face the bay.
+ * The brick is one field. The fountain sits at the north end, Sue Bierman
+ * Park is past that, Market and Embarcadero Center are west, the Embarcadero
+ * and the Ferry Building (clock tower at the south end) are east.
+ * The tennis courts on the current map are brick here.
+ * Tubes are ours, inside that north footprint, not a trace of the sculpture.
  */
 export function createEnvironment() {
   const root = new THREE.Group();
@@ -156,23 +158,13 @@ export function createEnvironment() {
 
   const brick = new THREE.MeshStandardMaterial({
     map: brickMap(),
-    color: 0xd8d0cc,
+    color: 0xfff4ef,
     roughness: 0.92,
-  });
-  const brickDark = new THREE.MeshStandardMaterial({
-    map: brickMap(),
-    color: 0xb8aea8,
-    roughness: 0.94,
   });
   const street = new THREE.MeshStandardMaterial({
     map: concreteMap(6),
     color: 0x9aa1a6,
     roughness: 0.95,
-  });
-  const walk = new THREE.MeshStandardMaterial({
-    map: concreteMap(4),
-    color: 0xc5ccd0,
-    roughness: 0.9,
   });
   const lawn = new THREE.MeshStandardMaterial({ color: 0x3e6a45, roughness: 0.95 });
   const tubeMat = new THREE.MeshStandardMaterial({
@@ -208,7 +200,7 @@ export function createEnvironment() {
     return put(mesh, flags);
   }
 
-  // Catch if a wheel misses every slab.
+  // Off the map only. The land itself is one slab, so a seam cannot drop you.
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(400, 400),
     new THREE.MeshStandardMaterial({
@@ -222,99 +214,97 @@ export function createEnvironment() {
   ground.name = "ground";
   ground.receiveShadow = true;
 
-  // Market Street, behind the spawn, running north-south along X.
-  slab(70, 0.3, 16, 0, 0, -26, street, { floor: true });
-  for (let i = -3; i <= 3; i++) {
-    const stripe = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.02, 0.35),
-      new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.6 }),
-    );
-    stripe.position.set(i * 4.2, 0.02, -26);
-    root.add(stripe);
-  }
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.6 });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b5344, roughness: 0.9 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6a3a, roughness: 0.85 });
+  const clockMat = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.4 });
 
-  // Upper brick plaza. Spawn sits here, facing the bay. Meets Market at z=-18.
-  slab(48, 0.4, 24, 0, 0, -6, brick, { floor: true });
+  // Streets, sidewalk, and promenade. Brick and lawn sit on this, overlapping.
+  slab(170, 0.6, 200, 0, 0, 20, street, { floor: true });
 
-  // Four shallow steps down into the bowl. Treads overlap so a wheel cannot drop between them.
-  for (let i = 0; i < 4; i++) {
-    const top = -0.18 * (i + 1);
-    slab(36, 0.4, 1.55, 2, top, 6.7 + i * 1.45, brickDark, { floor: true, solid: true });
-  }
+  // One brick field. Spawn is on it, nose toward the bay.
+  slab(78, 0.3, 56, 6, 0.04, 6, brick, { floor: true });
 
-  // Sunken brick bowl.
-  slab(40, 0.4, 17, 2, -0.72, 20, brickDark, { floor: true });
+  // Sue Bierman Park, north of the brick. Overlaps the plaza edge.
+  slab(40, 0.2, 52, 62, 0.05, 2, lawn, { floor: true });
 
-  // Steps back up to the Embarcadero sidewalk.
-  for (let i = 0; i < 4; i++) {
-    const top = -0.72 + 0.18 * (i + 1);
-    slab(36, 0.4, 1.55, 2, top, 29.2 + i * 1.45, brick, { floor: true, solid: true });
-  }
-
-  slab(50, 0.3, 6.4, 2, 0, 37.3, walk, { floor: true });
-  slab(50, 0.3, 12, 2, 0, 46, street, { floor: true });
-  slab(50, 0.3, 5, 2, 0, 54.5, walk, { floor: true });
-
-  // Bay, past the promenade. Not a floor.
-  const water = new THREE.Mesh(
-    new THREE.PlaneGeometry(80, 40),
-    waterMat,
-  );
-  water.rotation.x = -Math.PI / 2;
-  water.position.set(2, -0.35, 74);
-  root.add(water);
-
-  // Ferry Building, simplified: a long hall and a clock tower. 1898 building.
-  slab(16, 14, 36, 2, 14, 68, ferryMat, { solid: true });
-  slab(6, 28, 6, 2, 28, 68, towerMat, { solid: true });
-
-  // Sue Bierman Park, north of the plaza.
-  slab(22, 0.3, 36, 34, 0.05, 8, lawn, { floor: true });
-
-  // Embarcadero Center block, south-west, across Market.
-  slab(22, 55, 16, -8, 55, -62, glass, { solid: true });
-
-  // Seat wall on the north side of the upper plaza, running east.
-  slab(0.7, 0.45, 12, 14, 0.45, -6, stone, { floor: true, solid: true });
-
-  // Low block where a monument stands. Not the sculpture.
-  slab(1.6, 0.7, 1.6, 18, 0.7, 2, stone, { floor: true, solid: true });
-
-  // 1983 stage, west edge of the bowl, facing back toward Market.
-  slab(8, 0.55, 4, -10, -0.17, 16, stone, { floor: true, solid: true });
-
-  // Fountain plinth in the northeast of the bowl.
-  const plinth = slab(16, 0.45, 12, 8, -0.27, 22, tubeMat, { floor: true, solid: true });
+  // Fountain plinth, north end of the brick. A ledge, not a pit.
+  const plinth = slab(18, 0.42, 14, 28, 0.46, 4, tubeMat, { floor: true, solid: true });
   // Square tubes in that footprint. Leans are original, not measured off the artwork.
   const tubes = [
-    [3, 18, 7, 0.15],
-    [6, 21, 11, -0.2],
-    [10, 19, 8, 0.35],
-    [13, 23, 6, -0.1],
-    [8, 25, 12, 0.05],
-    [4, 24, 5, 0.4],
+    [32, 2, 9, 0.12],
+    [28, 6, 12, -0.1],
+    [24, 1, 8, 0.16],
+    [26, 9, 7, -0.08],
+    [30, 8, 10, 0.05],
+    [22, 5, 6, 0.14],
   ];
   for (const [x, z, h, lean] of tubes) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1.8), tubeMat);
-    mesh.position.set(x, -0.27 + h / 2, z);
+    mesh.position.set(x, 0.46 + h / 2, z);
     mesh.rotation.z = lean;
     put(mesh, { solid: true });
   }
 
+  // Round stage on the east half of the brick, from the aerial.
+  const stage = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 0.12, 28), stone);
+  stage.position.set(-4, 0.1, 18);
+  put(stage, { floor: true });
+
+  // Palms along the east sidewalk, between the brick and the Embarcadero.
+  for (let x = -28; x <= 40; x += 8) {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 5.2, 6), trunkMat);
+    trunk.position.set(x, 2.6, 37);
+    put(trunk, { solid: true });
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(1.7, 1.3, 6), leafMat);
+    crown.position.set(x, 5.5, 37);
+    crown.castShadow = true;
+    root.add(crown);
+  }
+
+  // Lane lines on the Embarcadero. The road runs north-south.
+  for (let i = 0; i < 5; i++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(90, 0.02, 0.16), stripeMat);
+    line.position.set(6, 0.02, 46 + i * 8);
+    root.add(line);
+  }
+  // Crosswalk off the west edge, toward Market.
+  for (let i = -4; i <= 4; i++) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.02, 3.6), stripeMat);
+    stripe.position.set(8 + i * 3.4, 0.03, -26);
+    root.add(stripe);
+  }
+
+  // Bay past the promenade. Not a floor. The land slab ends just before it.
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(160, 70), waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(0, -0.45, 150);
+  root.add(water);
+
+  // Ferry Building. Long hall along the water, clock tower at the south end.
+  // Hall runs north. The tower stands at the south end, toward Market.
+  slab(72, 16, 18, 16, 16, 100, ferryMat, { solid: true });
+  slab(10, 56, 10, -26, 56, 100, towerMat, { solid: true });
+  const clockW = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.2, 20), clockMat);
+  clockW.rotation.x = Math.PI / 2;
+  clockW.position.set(-26, 42, 94.8);
+  root.add(clockW);
+  const clockE = clockW.clone();
+  clockE.position.z = 105.2;
+  root.add(clockE);
+
+  // Embarcadero Center, west across Market.
+  slab(22, 52, 18, 12, 52, -50, glass, { solid: true });
+  slab(18, 40, 16, -14, 40, -48, glass, { solid: true });
+
   root.updateMatrixWorld(true);
   const solids = solidMeshes.map((m) => new THREE.Box3().setFromObject(m));
 
-  // Step lip you can grind while riding across the drop, and the plinth's near edge.
-  const stepLip = grindSpec(
-    new THREE.Vector3(0, 0.02, 5.9),
-    new THREE.Vector3(1, 0, 0),
-    14,
-    0.06,
-  );
+  // South lip of the fountain plinth. Ride east-west along it.
   const plinthEdge = grindSpec(
-    new THREE.Vector3(plinth.position.x, -0.22, plinth.position.z - 6),
-    new THREE.Vector3(1, 0, 0),
-    7,
+    new THREE.Vector3(plinth.position.x - 9, 0.46, plinth.position.z),
+    new THREE.Vector3(0, 0, 1),
+    6,
     0.08,
   );
 
@@ -325,6 +315,6 @@ export function createEnvironment() {
     props: [root],
     floors,
     solids,
-    grinds: [stepLip, plinthEdge],
+    grinds: [plinthEdge],
   };
 }

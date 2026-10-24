@@ -33,8 +33,8 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **R2** — turn right (ground and air)
 - **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.
 - **Hold D-pad up** — respawn at that mark (tap does nothing)
-- **Grind** — the lip of the steps into the bowl, the fountain plinth, and the seat wall. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
-- **The spot** — you spawn on the upper brick, facing east toward the bay. The fountain is ahead and to the right. Sue Bierman Park is north. Market Street is behind you. The Ferry Building is across the Embarcadero.
+- **Grind** — the south lip of the fountain plinth. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
+- **The spot** — one brick plaza. You spawn facing east, toward the bay. The fountain is on your left (north). Sue Bierman Park is past it. Market and Embarcadero Center are behind you. The Ferry Building is across the Embarcadero, clock tower to your right.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating
 - Sound starts when you press a button (rolling, push, pop, grind, land, bail). Noise is pink, then a resonant filter, with a high shelf on the master.
