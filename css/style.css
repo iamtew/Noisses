@@ -197,3 +197,15 @@ body {
   letter-spacing: 0.03em;
   color: #c8c4bc;
 }
+
+#source {
+  position: fixed;
+  right: 0.9rem;
+  bottom: 0.55rem;
+  z-index: 3;
+  color: #e7e1d6;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  opacity: 0.72;
+}

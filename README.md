@@ -41,6 +41,10 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - Keyboard is not skating
 - Sound starts when you press a button (rolling, push, pop, grind, land, bail). Noise is pink, then a resonant filter, with a high shelf on the master.
 
+## License
+
+Copyright 2026 Mikael. [GNU AGPL 3.0](LICENSE). If you run a changed copy on a server, the people using it get the source too. The site links to the repo for that.
+
 ## Deploy (GitHub Pages)
 
 GitHub Pages serves `master` from the repo root. The share card is `og.png`. `index.html` is the site entry.
