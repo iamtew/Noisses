@@ -23,6 +23,29 @@ function concreteMap(repeat) {
   return tex;
 }
 
+function brickMap() {
+  const s = 128;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#8d4638";
+  ctx.fillRect(0, 0, s, s);
+  ctx.fillStyle = "#a85a48";
+  const bw = 28;
+  const bh = 12;
+  for (let row = 0; row < s / bh; row++) {
+    const ox = row % 2 ? bw / 2 : 0;
+    for (let x = -bw; x < s + bw; x += bw) {
+      ctx.fillRect(x + ox + 1, row * bh + 1, bw - 2, bh - 2);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(18, 18);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function grindSpec(origin, dir, halfLen, radius) {
   return {
     origin: origin.clone(),
@@ -30,69 +53,6 @@ function grindSpec(origin, dir, halfLen, radius) {
     halfLen,
     radius,
   };
-}
-
-/** Rail runs forward (+Z) so a straight push can ollie along it. */
-function makeRail() {
-  const metal = new THREE.MeshStandardMaterial({
-    color: 0x9aa3ab,
-    metalness: 0.75,
-    roughness: 0.32,
-  });
-  const paint = new THREE.MeshStandardMaterial({
-    color: 0x3a3d42,
-    roughness: 0.8,
-  });
-  const group = new THREE.Group();
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 5.2, 28), metal);
-  bar.rotation.x = Math.PI / 2;
-  bar.position.set(1.7, 0.34, 5.5);
-  bar.castShadow = true;
-  bar.receiveShadow = true;
-  group.add(bar);
-  for (const z of [3.1, 7.9]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), paint);
-    post.position.set(1.7, 0.17, z);
-    post.castShadow = true;
-    post.receiveShadow = true;
-    group.add(post);
-  }
-  const grind = grindSpec(
-    new THREE.Vector3(1.7, 0.34, 5.5),
-    new THREE.Vector3(0, 0, 1),
-    2.55,
-    0.028,
-  );
-  return { group, grind };
-}
-
-function makeLedge(tex) {
-  const conc = new THREE.MeshStandardMaterial({
-    map: tex,
-    color: 0xb8bcc0,
-    roughness: 0.9,
-  });
-  const cope = new THREE.MeshStandardMaterial({
-    color: 0xb0b6bc,
-    metalness: 0.55,
-    roughness: 0.4,
-  });
-  const group = new THREE.Group();
-  const block = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.32, 4.5), conc);
-  block.position.set(-2.0, 0.16, 5.5);
-  block.castShadow = true;
-  block.receiveShadow = true;
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 4.5), cope);
-  edge.position.set(-1.75, 0.34, 5.5);
-  edge.castShadow = true;
-  group.add(block, edge);
-  const grind = grindSpec(
-    new THREE.Vector3(-1.75, 0.34, 5.5),
-    new THREE.Vector3(0, 0, 1),
-    2.2,
-    0.04,
-  );
-  return { group, grind, floor: block };
 }
 
 function markMat(color, opacity) {
@@ -126,90 +86,6 @@ export function createSpawnMark() {
   charge.position.y = 0.04;
   charge.visible = false;
   return { group, charge };
-}
-
-function concMat(tex, color) {
-  return new THREE.MeshStandardMaterial({
-    map: tex,
-    color,
-    roughness: 0.92,
-  });
-}
-
-function wedgeGeometry(len, height, width) {
-  const hw = width * 0.5;
-  const v = [
-    [-hw, 0, 0],
-    [hw, 0, 0],
-    [hw, height, len],
-    [-hw, height, len],
-    [-hw, 0, len],
-    [hw, 0, len],
-  ];
-  const faces = [
-    [0, 1, 2],
-    [0, 2, 3],
-    [0, 3, 4],
-    [1, 5, 2],
-    [4, 3, 2],
-    [4, 2, 5],
-    [0, 4, 5],
-    [0, 5, 1],
-  ];
-  const pos = new Float32Array(faces.length * 9);
-  const uv = new Float32Array(faces.length * 6);
-  let i = 0;
-  let u = 0;
-  for (const f of faces) {
-    for (const vi of f) {
-      pos[i++] = v[vi][0];
-      pos[i++] = v[vi][1];
-      pos[i++] = v[vi][2];
-      uv[u++] = (v[vi][0] + hw) / width;
-      uv[u++] = v[vi][2] / len;
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
-  geo.computeVertexNormals();
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
-  return geo;
-}
-
-/** Four treads plus a side stringer. */
-function makeStairs(tex) {
-  const group = new THREE.Group();
-  const floors = [];
-  const solids = [];
-  const mat = concMat(tex, 0xb0b4b8);
-  for (let i = 0; i < 4; i++) {
-    const tread = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.15, 0.36), mat);
-    tread.position.set(-5.4, 0.075 + i * 0.15, 11.2 + i * 0.36);
-    tread.castShadow = true;
-    tread.receiveShadow = true;
-    tread.updateMatrixWorld(true);
-    group.add(tread);
-    floors.push(tread);
-    solids.push(new THREE.Box3().setFromObject(tread));
-  }
-  const side = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 1.5), mat);
-  side.position.set(-6.22, 0.3, 11.74);
-  side.castShadow = true;
-  side.receiveShadow = true;
-  group.add(side);
-  return { group, floors, solids };
-}
-
-/** Wedge sitting on the pad so you can roll it. */
-function makeBank(tex) {
-  const slab = new THREE.Mesh(wedgeGeometry(5.2, 1.15, 3.4), concMat(tex, 0xd8dce0));
-  slab.position.set(5.6, 0, 4.2);
-  slab.castShadow = true;
-  slab.receiveShadow = true;
-  slab.updateMatrixWorld(true);
-  return { group: slab, floor: slab };
 }
 
 /** Push/land grit. Reuses one Points cloud. */
@@ -265,35 +141,190 @@ export function createDust() {
   return { points, burst, step };
 }
 
-/** Pad, rail right, ledge left, stairs back-left, bank right. */
+/**
+ * Embarcadero Plaza, San Francisco, cropped so it can be skated.
+ * +Z is east, toward the bay. +X is north.
+ * Facts used: Market meets the plaza on the west, the brick bowl is sunken,
+ * the fountain sits at the northeast, Sue Bierman Park is north, the
+ * Embarcadero and the Ferry Building are east. About 4 acres in real life.
+ * The fountain tubes are ours, inside the real footprint, not a trace of the sculpture.
+ */
 export function createEnvironment() {
-  const groundTex = concreteMap(40);
-  const propTex = concreteMap(2);
+  const root = new THREE.Group();
+  const floors = [];
+  const solidMeshes = [];
+
+  const brick = new THREE.MeshStandardMaterial({
+    map: brickMap(),
+    color: 0xd8d0cc,
+    roughness: 0.92,
+  });
+  const brickDark = new THREE.MeshStandardMaterial({
+    map: brickMap(),
+    color: 0xb8aea8,
+    roughness: 0.94,
+  });
+  const street = new THREE.MeshStandardMaterial({
+    map: concreteMap(6),
+    color: 0x9aa1a6,
+    roughness: 0.95,
+  });
+  const walk = new THREE.MeshStandardMaterial({
+    map: concreteMap(4),
+    color: 0xc5ccd0,
+    roughness: 0.9,
+  });
+  const lawn = new THREE.MeshStandardMaterial({ color: 0x3e6a45, roughness: 0.95 });
+  const tubeMat = new THREE.MeshStandardMaterial({
+    color: 0xb7b3aa,
+    roughness: 0.72,
+  });
+  const stone = new THREE.MeshStandardMaterial({ color: 0xc4b8a4, roughness: 0.8 });
+  const ferryMat = new THREE.MeshStandardMaterial({ color: 0xd9d3c6, roughness: 0.7 });
+  const towerMat = new THREE.MeshStandardMaterial({ color: 0xeee6d6, roughness: 0.55 });
+  const glass = new THREE.MeshStandardMaterial({
+    color: 0x31424c,
+    roughness: 0.35,
+    metalness: 0.45,
+  });
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x35586a,
+    roughness: 0.35,
+    metalness: 0.15,
+  });
+
+  function put(mesh, { floor = false, solid = false } = {}) {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+    if (floor) floors.push(mesh);
+    if (solid) solidMeshes.push(mesh);
+    return mesh;
+  }
+
+  function slab(w, h, d, x, top, z, mat, flags) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, top - h / 2, z);
+    return put(mesh, flags);
+  }
+
+  // Catch if a wheel misses every slab.
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
+    new THREE.PlaneGeometry(400, 400),
     new THREE.MeshStandardMaterial({
-      map: groundTex,
-      roughness: 0.94,
-      color: 0xc8ccd0,
-      side: THREE.DoubleSide,
+      map: concreteMap(24),
+      color: 0x8e9599,
+      roughness: 0.96,
     }),
   );
   ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1.6;
   ground.name = "ground";
   ground.receiveShadow = true;
 
-  const rail = makeRail();
-  const ledge = makeLedge(propTex);
-  const stairs = makeStairs(propTex);
-  const bank = makeBank(propTex);
-  ledge.floor.updateMatrixWorld(true);
-  const ledgeBox = new THREE.Box3().setFromObject(ledge.floor);
+  // Market Street, behind the spawn, running north-south along X.
+  slab(70, 0.3, 16, 0, 0, -26, street, { floor: true });
+  for (let i = -3; i <= 3; i++) {
+    const stripe = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.02, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.6 }),
+    );
+    stripe.position.set(i * 4.2, 0.02, -26);
+    root.add(stripe);
+  }
+
+  // Upper brick plaza. Spawn sits here, facing the bay. Meets Market at z=-18.
+  slab(48, 0.4, 24, 0, 0, -6, brick, { floor: true });
+
+  // Four shallow steps down into the bowl. Treads overlap so a wheel cannot drop between them.
+  for (let i = 0; i < 4; i++) {
+    const top = -0.18 * (i + 1);
+    slab(36, 0.4, 1.55, 2, top, 6.7 + i * 1.45, brickDark, { floor: true, solid: true });
+  }
+
+  // Sunken brick bowl.
+  slab(40, 0.4, 17, 2, -0.72, 20, brickDark, { floor: true });
+
+  // Steps back up to the Embarcadero sidewalk.
+  for (let i = 0; i < 4; i++) {
+    const top = -0.72 + 0.18 * (i + 1);
+    slab(36, 0.4, 1.55, 2, top, 29.2 + i * 1.45, brick, { floor: true, solid: true });
+  }
+
+  slab(50, 0.3, 6.4, 2, 0, 37.3, walk, { floor: true });
+  slab(50, 0.3, 12, 2, 0, 46, street, { floor: true });
+  slab(50, 0.3, 5, 2, 0, 54.5, walk, { floor: true });
+
+  // Bay, past the promenade. Not a floor.
+  const water = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 40),
+    waterMat,
+  );
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(2, -0.35, 74);
+  root.add(water);
+
+  // Ferry Building, simplified: a long hall and a clock tower. 1898 building.
+  slab(16, 14, 36, 2, 14, 68, ferryMat, { solid: true });
+  slab(6, 28, 6, 2, 28, 68, towerMat, { solid: true });
+
+  // Sue Bierman Park, north of the plaza.
+  slab(22, 0.3, 36, 34, 0.05, 8, lawn, { floor: true });
+
+  // Embarcadero Center block, south-west, across Market.
+  slab(22, 55, 16, -8, 55, -62, glass, { solid: true });
+
+  // Seat wall on the north side of the upper plaza, running east.
+  slab(0.7, 0.45, 12, 14, 0.45, -6, stone, { floor: true, solid: true });
+
+  // Low block where a monument stands. Not the sculpture.
+  slab(1.6, 0.7, 1.6, 18, 0.7, 2, stone, { floor: true, solid: true });
+
+  // 1983 stage, west edge of the bowl, facing back toward Market.
+  slab(8, 0.55, 4, -10, -0.17, 16, stone, { floor: true, solid: true });
+
+  // Fountain plinth in the northeast of the bowl.
+  const plinth = slab(16, 0.45, 12, 8, -0.27, 22, tubeMat, { floor: true, solid: true });
+  // Square tubes in that footprint. Leans are original, not measured off the artwork.
+  const tubes = [
+    [3, 18, 7, 0.15],
+    [6, 21, 11, -0.2],
+    [10, 19, 8, 0.35],
+    [13, 23, 6, -0.1],
+    [8, 25, 12, 0.05],
+    [4, 24, 5, 0.4],
+  ];
+  for (const [x, z, h, lean] of tubes) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1.8), tubeMat);
+    mesh.position.set(x, -0.27 + h / 2, z);
+    mesh.rotation.z = lean;
+    put(mesh, { solid: true });
+  }
+
+  root.updateMatrixWorld(true);
+  const solids = solidMeshes.map((m) => new THREE.Box3().setFromObject(m));
+
+  // Step lip you can grind while riding across the drop, and the plinth's near edge.
+  const stepLip = grindSpec(
+    new THREE.Vector3(0, 0.02, 5.9),
+    new THREE.Vector3(1, 0, 0),
+    14,
+    0.06,
+  );
+  const plinthEdge = grindSpec(
+    new THREE.Vector3(plinth.position.x, -0.22, plinth.position.z - 6),
+    new THREE.Vector3(1, 0, 0),
+    7,
+    0.08,
+  );
+
+  floors.push(ground);
 
   return {
     ground,
-    props: [rail.group, ledge.group, stairs.group, bank.group],
-    floors: [ground, ledge.floor, bank.floor, ...stairs.floors],
-    solids: [ledgeBox, ...stairs.solids],
-    grinds: [rail.grind, ledge.grind],
+    props: [root],
+    floors,
+    solids,
+    grinds: [stepLip, plinthEdge],
   };
 }
