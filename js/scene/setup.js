@@ -39,8 +39,11 @@ export function setupScene(canvas) {
   );
   camera.position.set(CAM_SIDE, CAM_HEIGHT, -CAM_BACK);
 
-  scene.add(new THREE.HemisphereLight(0xd4e0ec, 0x6e6860, 0.88));
-  const sun = new THREE.DirectionalLight(0xfff1dd, 1.22);
+  scene.add(new THREE.HemisphereLight(0xd7e2ee, 0x746c62, 0.95));
+  const fill = new THREE.DirectionalLight(0xc9d7ea, 0.42);
+  fill.position.set(-7, 6, -3);
+  scene.add(fill);
+  const sun = new THREE.DirectionalLight(0xfff1dd, 1.28);
   sun.position.set(8, 14, 6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);

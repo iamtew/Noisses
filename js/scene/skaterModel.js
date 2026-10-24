@@ -3,20 +3,38 @@ import * as THREE from "three";
 // ponytail: posed meshes, not a ragdoll. Constraints if a bail should leave the board.
 
 const _a = new THREE.Vector3();
+const _pole = new THREE.Vector3();
 const _unitY = new THREE.Vector3(0, 1, 0);
 const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
 const _ankle = new THREE.Vector3();
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
+const THIGH = 0.26;
+const SHIN = 0.25;
+
 function limb(radius, mat) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.85, 1, 6), mat);
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.82, 1, 16), mat);
   mesh.castShadow = true;
   return mesh;
 }
 
+function bentArm(cloth, skin) {
+  const g = new THREE.Group();
+  const upper = hung(0.03, 0.2, cloth);
+  const fore = hung(0.025, 0.18, cloth);
+  fore.position.y = -0.2;
+  fore.rotation.x = 0.7;
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 10), skin);
+  hand.position.y = -0.18;
+  hand.castShadow = true;
+  fore.add(hand);
+  g.add(upper, fore);
+  return g;
+}
+
 function hung(radius, length, mat) {
-  const geo = new THREE.CylinderGeometry(radius, radius * 0.85, length, 6);
+  const geo = new THREE.CylinderGeometry(radius, radius * 0.85, length, 14);
   geo.translate(0, -length / 2, 0);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
@@ -37,22 +55,26 @@ export function createSkater() {
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
-  const pants = new THREE.MeshStandardMaterial({ color: 0x2a3140, roughness: 0.85 });
-  const hoodie = new THREE.MeshStandardMaterial({ color: 0xc4532a, roughness: 0.78 });
-  const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.7 });
+  const pants = new THREE.MeshStandardMaterial({ color: 0x243044, roughness: 0.86 });
+  const hoodie = new THREE.MeshStandardMaterial({ color: 0xb8432e, roughness: 0.8 });
+  const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.65 });
 
   const chest = new THREE.Group();
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.28, 0.26), hoodie);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.2, 6, 16), hoodie);
   torso.position.y = 0.2;
   torso.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), skin);
-  head.position.set(0.04, 0.4, 0);
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16), hoodie);
+  hood.scale.set(0.95, 1.05, 1.12);
+  hood.position.set(-0.02, 0.4, 0);
+  hood.castShadow = true;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.072, 24, 16), skin);
+  head.position.set(0.045, 0.4, 0);
   head.castShadow = true;
-  const armL = hung(0.028, 0.32, hoodie);
-  const armR = hung(0.028, 0.32, hoodie);
-  armL.position.set(0.02, 0.22, 0.16);
-  armR.position.set(0.02, 0.22, -0.16);
-  chest.add(torso, head, armL, armR);
+  const armL = bentArm(hoodie, skin);
+  const armR = bentArm(hoodie, skin);
+  armL.position.set(0.02, 0.28, 0.15);
+  armR.position.set(0.02, 0.28, -0.15);
+  chest.add(torso, hood, head, armL, armR);
 
   const frontUpper = limb(0.04, pants);
   const frontLower = limb(0.032, pants);
@@ -74,10 +96,19 @@ export function createSkater() {
   };
 }
 
+/** Knee pokes toward the toes so the shin meets the shoe. */
 function leg(upper, lower, hip, ankle, side) {
-  _knee.copy(hip).lerp(ankle, 0.5);
-  _knee.x += side * 0.07;
-  _knee.y += 0.08;
+  _a.copy(ankle).sub(hip);
+  const dist = Math.max(0.08, Math.min(_a.length(), THIGH + SHIN - 0.02));
+  const along = (dist * dist + THIGH * THIGH - SHIN * SHIN) / (2 * dist);
+  const height = Math.sqrt(Math.max(0, THIGH * THIGH - along * along));
+  _knee.copy(hip).addScaledVector(_a, along / _a.length());
+  _pole.set(side, 0.35, 0);
+  const proj = _pole.dot(_a) / _a.lengthSq();
+  _pole.addScaledVector(_a, -proj);
+  if (_pole.lengthSq() < 1e-8) _pole.set(side, 0, 0);
+  _pole.normalize();
+  _knee.addScaledVector(_pole, height);
   aim(upper, hip, _knee);
   aim(lower, _knee, ankle);
 }
@@ -96,7 +127,7 @@ export function poseSkater(skater, model, input, board, dt) {
 
   const weight = Math.max(0, Math.min(1, (input.front.y + input.back.y) * 0.5));
   const air = board.grounded ? 0 : 0.1;
-  const hipY = 0.5 - weight * 0.1 - air;
+  const hipY = 0.46 - weight * 0.08 - air;
   const side = board.regular ? 1 : -1;
 
   skater.chest.position.y = hipY;
@@ -108,12 +139,12 @@ export function poseSkater(skater, model, input, board, dt) {
 
   _hip.set(0, hipY, 0.06);
   _ankle.copy(model.frontFoot.position);
-  _ankle.y += 0.02;
+  _ankle.y += 0.04;
   leg(skater.frontUpper, skater.frontLower, _hip, _ankle, side);
 
   _hip.set(0, hipY, -0.06);
   _ankle.copy(model.backFoot.position);
-  _ankle.y += 0.02;
+  _ankle.y += 0.04;
   leg(skater.backUpper, skater.backLower, _hip, _ankle, side);
 
   const flop = Math.min(1, (board.bailed || 0) / 1.2);
@@ -146,7 +177,7 @@ export function selfCheckSkater() {
     pushRight: false,
   };
   poseSkater(skater, model, input, board, 0.016);
-  if (!(skater.chest.position.y > 0.4)) throw new Error("skater hip is on the deck");
+  if (!(skater.chest.position.y > 0.35)) throw new Error("skater hip is on the deck");
   if (!Number.isFinite(skater.frontUpper.quaternion.w)) throw new Error("skater leg");
 
   board.grounded = false;

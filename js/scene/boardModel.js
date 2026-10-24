@@ -43,8 +43,8 @@ function extrudeDeck(depth, bevel) {
     bevelEnabled: bevel,
     bevelThickness: 0.002,
     bevelSize: 0.003,
-    bevelSegments: 2,
-    curveSegments: 16,
+    bevelSegments: 3,
+    curveSegments: 28,
   });
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -63,14 +63,14 @@ function truckAt(z, metal, bushing) {
   const g = new THREE.Group();
   const base = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.01, 0.06), metal);
   base.position.y = -0.006;
-  const king = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.04, 8), metal);
+  const king = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.04, 16), metal);
   king.position.y = -0.028;
-  const bush = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 10), bushing);
+  const bush = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 16), bushing);
   bush.position.y = -0.022;
   const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.022, 0.032), metal);
   hanger.position.y = -0.048;
   const axle = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.006, 0.006, 0.24, 8),
+    new THREE.CylinderGeometry(0.006, 0.006, 0.24, 16),
     metal,
   );
   axle.rotation.z = Math.PI / 2;
@@ -115,13 +115,19 @@ export function createBoardModel() {
   const tape = new THREE.Mesh(extrudeDeck(0.002, false), grip);
   tape.position.y = 0.017;
   tape.castShadow = true;
-  group.add(deck, tape);
+  const markMat = new THREE.MeshStandardMaterial({ color: 0xd7d2c8, roughness: 0.55 });
+  const noseMark = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.028), markMat);
+  noseMark.rotation.x = -Math.PI / 2;
+  noseMark.position.set(0, 0.021, 0.2);
+  const tailMark = noseMark.clone();
+  tailMark.position.z = -0.2;
+  group.add(deck, tape, noseMark, tailMark);
 
   group.add(truckAt(0.205, metal, bushing));
   group.add(truckAt(-0.205, metal, bushing));
 
   const wheels = [];
-  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.036, 18);
+  const geo = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.036, 28);
   for (const w of WHEEL_LOCAL) {
     const wheel = new THREE.Mesh(geo, urethane);
     wheel.rotation.z = Math.PI / 2;
@@ -131,11 +137,25 @@ export function createBoardModel() {
     wheels.push(wheel);
   }
 
-  const shoe = new THREE.MeshStandardMaterial({ color: 0x2a2e32, roughness: 0.8 });
-  const frontFoot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 8), shoe);
-  const backFoot = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 8), shoe);
-  frontFoot.scale.set(1, 0.38, 1.45);
-  backFoot.scale.set(1, 0.38, 1.45);
+  const shoe = new THREE.MeshStandardMaterial({ color: 0x1c1e22, roughness: 0.72 });
+  const sole = new THREE.MeshStandardMaterial({ color: 0xd5d0c6, roughness: 0.55 });
+  const shoeGeo = new THREE.CapsuleGeometry(0.026, 0.08, 4, 12);
+  const soleGeo = new THREE.CapsuleGeometry(0.028, 0.09, 3, 12);
+  const frontFoot = new THREE.Group();
+  const backFoot = new THREE.Group();
+  for (const foot of [frontFoot, backFoot]) {
+    const upper = new THREE.Mesh(shoeGeo, shoe);
+    upper.rotation.x = Math.PI / 2;
+    upper.position.y = 0.032;
+    upper.scale.set(1.15, 1, 0.62);
+    upper.castShadow = true;
+    const gum = new THREE.Mesh(soleGeo, sole);
+    gum.rotation.x = Math.PI / 2;
+    gum.position.y = 0.012;
+    gum.scale.set(1.2, 1, 0.4);
+    gum.castShadow = true;
+    foot.add(upper, gum);
+  }
   frontFoot.castShadow = true;
   backFoot.castShadow = true;
   group.add(frontFoot, backFoot);

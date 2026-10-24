@@ -44,7 +44,7 @@ function makeRail() {
     roughness: 0.8,
   });
   const group = new THREE.Group();
-  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 5.2, 16), metal);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 5.2, 28), metal);
   bar.rotation.x = Math.PI / 2;
   bar.position.set(1.7, 0.34, 5.5);
   bar.castShadow = true;
