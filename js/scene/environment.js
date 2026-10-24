@@ -200,6 +200,44 @@ export function createEnvironment() {
     return put(mesh, flags);
   }
 
+  // Rises toward +Z. Bottom sits on the brick. Floor only: a solid box would block the slope.
+  function kicker(w, h, d, x, z) {
+    const x0 = -w / 2;
+    const x1 = w / 2;
+    const z0 = -d / 2;
+    const z1 = d / 2;
+    const pos = new Float32Array([
+      x0, 0, z0, x1, 0, z0, x1, h, z1,
+      x0, 0, z0, x1, h, z1, x0, h, z1,
+      x0, 0, z1, x0, h, z1, x1, h, z1,
+      x0, 0, z1, x1, h, z1, x1, 0, z1,
+      x0, 0, z0, x0, h, z1, x0, 0, z1,
+      x1, 0, z0, x1, 0, z1, x1, h, z1,
+    ]);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, stone);
+    mesh.position.set(x, 0.04, z);
+    return put(mesh, { floor: true });
+  }
+
+  // Round bar on two posts. Grind line is the top of the bar.
+  function rail(x, y, z, len, alongX) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 12), metal);
+    bar.rotation[alongX ? "z" : "x"] = Math.PI / 2;
+    bar.position.set(x, y, z);
+    put(bar, { solid: true });
+    const inset = len / 2 - 0.25;
+    for (const t of [-inset, inset]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, y - 0.04, 8), metal);
+      post.position.set(x + (alongX ? t : 0), (y + 0.04) / 2, z + (alongX ? 0 : t));
+      put(post, { solid: true });
+    }
+    const dir = alongX ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+    return grindSpec(new THREE.Vector3(x, y + 0.04, z), dir, inset, 0.06);
+  }
+
   // Off the map only. The land itself is one slab, so a seam cannot drop you.
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(400, 400),
@@ -218,6 +256,11 @@ export function createEnvironment() {
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b5344, roughness: 0.9 });
   const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6a3a, roughness: 0.85 });
   const clockMat = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.4 });
+  const metal = new THREE.MeshStandardMaterial({
+    color: 0xb7bcc2,
+    roughness: 0.32,
+    metalness: 0.72,
+  });
 
   // Streets, sidewalk, and promenade. Brick and lawn sit on this, overlapping.
   slab(170, 0.6, 200, 0, 0, 20, street, { floor: true });
@@ -250,6 +293,16 @@ export function createEnvironment() {
   const stage = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 0.12, 28), stone);
   stage.position.set(-4, 0.1, 18);
   put(stage, { floor: true });
+
+  // Skate obstacles on open brick. Spawn at 0,0 stays clear.
+  // Ledge on the right, long toward the bay. Both lips grind.
+  slab(0.8, 0.46, 7, -14, 0.5, 3, stone, { floor: true, solid: true });
+  // Lower box ahead-left. Ride it or grind the long sides.
+  slab(1.5, 0.32, 4, 9, 0.36, 6, stone, { floor: true, solid: true });
+  // Kicker on the right, launches toward the bay.
+  kicker(2.2, 0.62, 2.6, -22, 10);
+  const railBay = rail(12, 0.48, 20, 6, false);
+  const railSide = rail(-18, 0.6, 22, 5, true);
 
   // Palms along the east sidewalk, between the brick and the Embarcadero.
   for (let x = -28; x <= 40; x += 8) {
@@ -307,6 +360,12 @@ export function createEnvironment() {
     6,
     0.08,
   );
+  const ledgeLips = [
+    grindSpec(new THREE.Vector3(-14.4, 0.5, 3), new THREE.Vector3(0, 0, 1), 3.3, 0.06),
+    grindSpec(new THREE.Vector3(-13.6, 0.5, 3), new THREE.Vector3(0, 0, 1), 3.3, 0.06),
+    grindSpec(new THREE.Vector3(8.25, 0.36, 6), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
+    grindSpec(new THREE.Vector3(9.75, 0.36, 6), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
+  ];
 
   floors.push(ground);
 
@@ -315,6 +374,6 @@ export function createEnvironment() {
     props: [root],
     floors,
     solids,
-    grinds: [plinthEdge],
+    grinds: [plinthEdge, ...ledgeLips, railBay, railSide],
   };
 }
