@@ -12,6 +12,31 @@ const _euler = new THREE.Euler(0, 0, 0, "YXZ");
 
 const THIGH = 0.26;
 const SHIN = 0.25;
+const FLOSS_MIN = 0.5;
+const HOODIE_KEY = "noisses-hoodie";
+export const HOODIE_DEFAULT = "#2e6fbf";
+
+export function loadHoodie() {
+  try {
+    const hex = localStorage.getItem(HOODIE_KEY);
+    if (hex && /^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+  } catch {
+    /* private window */
+  }
+  return HOODIE_DEFAULT;
+}
+
+export function saveHoodie(hex) {
+  try {
+    localStorage.setItem(HOODIE_KEY, hex);
+  } catch {
+    /* private window */
+  }
+}
+
+export function setHoodie(skater, hex) {
+  skater.hoodie.color.set(hex);
+}
 
 function limb(radius, mat) {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.82, 1, 16), mat);
@@ -56,7 +81,7 @@ export function createSkater() {
   const body = new THREE.Group();
   root.add(body);
   const pants = new THREE.MeshStandardMaterial({ color: 0x7d8ea3, roughness: 0.86 });
-  const hoodie = new THREE.MeshStandardMaterial({ color: 0x2e6fbf, roughness: 0.8 });
+  const hoodie = new THREE.MeshStandardMaterial({ color: loadHoodie(), roughness: 0.8 });
   const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.65 });
 
   const chest = new THREE.Group();
@@ -108,7 +133,10 @@ export function createSkater() {
     frontLower,
     backUpper,
     backLower,
+    hoodie,
     kick: 0,
+    floss: 0,
+    flossAmp: 0,
   };
 }
 
@@ -131,6 +159,7 @@ function leg(upper, lower, hip, ankle, side) {
 
 /**
  * Crouch with stick weight, kick the back foot on a push, flop on a bail.
+ * Rolling = floss. Standing still is too dignified.
  * Feet are already placed on the deck.
  */
 export function poseSkater(skater, model, input, board, dt) {
@@ -145,13 +174,25 @@ export function poseSkater(skater, model, input, board, dt) {
   const air = board.grounded ? 0 : 0.1;
   const hipY = 0.46 - weight * 0.08 - air;
   const side = board.regular ? 1 : -1;
+  const vx = board.vel ? board.vel.x : 0;
+  const vz = board.vel ? board.vel.z : 0;
+  const speed = Math.hypot(vx, vz);
+  const ride = board.grounded && !(board.bailed > 0) && speed > FLOSS_MIN;
+  const want = ride ? Math.min(1, (speed - FLOSS_MIN) / 3) : 0;
+  skater.flossAmp += (want - skater.flossAmp) * (1 - Math.exp(-10 * dt));
+  if (ride) skater.floss += dt * (5 + speed * 0.8);
+  const s = Math.sin(skater.floss) * skater.flossAmp;
+  const kickScale = 1 - skater.flossAmp * 0.55;
 
   skater.chest.position.y = hipY;
-  skater.chest.rotation.y = board.regular ? 0 : Math.PI;
-  skater.armL.rotation.z = 0.15;
-  skater.armR.rotation.z = -0.15;
-  skater.armL.rotation.x = 0.35 + skater.kick * 0.8;
-  skater.armR.rotation.x = 0.2 - skater.kick * 0.4;
+  skater.chest.rotation.y = (board.regular ? 0 : Math.PI) + s * 0.5;
+  skater.body.rotation.y = -s * 0.28;
+  skater.armL.rotation.z = 0.15 + s * 0.85;
+  skater.armR.rotation.z = -0.15 + s * 0.85;
+  skater.armL.rotation.x = 0.35 + skater.kick * 0.8 * kickScale;
+  skater.armR.rotation.x = 0.2 - skater.kick * 0.4 * kickScale;
+  skater.armL.rotation.y = -s * 1.15;
+  skater.armR.rotation.y = -s * 1.15;
 
   _hip.set(0, hipY, 0.06);
   _ankle.copy(model.frontFoot.position);
@@ -185,7 +226,7 @@ export function selfCheckSkater() {
     frontFoot: { position: new THREE.Vector3(0, 0.03, 0.18) },
     backFoot: { position: new THREE.Vector3(0, 0.03, -0.18) },
   };
-  const board = { regular: true, grounded: true, bailed: 0 };
+  const board = { regular: true, grounded: true, bailed: 0, vel: { x: 0, z: 0 } };
   const input = {
     front: { x: 0, y: 0 },
     back: { x: 0, y: 0 },
@@ -195,6 +236,14 @@ export function selfCheckSkater() {
   poseSkater(skater, model, input, board, 0.016);
   if (!(skater.chest.position.y > 0.35)) throw new Error("skater hip is on the deck");
   if (!Number.isFinite(skater.frontUpper.quaternion.w)) throw new Error("skater leg");
+  const restY = skater.armL.rotation.y;
+  board.vel.x = 4;
+  for (let i = 0; i < 40; i++) poseSkater(skater, model, input, board, 0.016);
+  if (!(Math.abs(skater.armL.rotation.y - restY) > 0.08)) throw new Error("skater should floss while rolling");
+  board.vel.x = 0;
+  board.grounded = true;
+  for (let i = 0; i < 80; i++) poseSkater(skater, model, input, board, 0.016);
+  if (!(Math.abs(skater.armL.rotation.y) < 0.05)) throw new Error("skater flossed while standing still");
 
   board.grounded = false;
   board.caught = false;

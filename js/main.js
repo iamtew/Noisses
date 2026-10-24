@@ -12,8 +12,8 @@ import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
-import { createSkater, placeSkater, poseSkater, selfCheckSkater } from "./scene/skaterModel.js";
-import { bindOverlay } from "./ui/overlay.js";
+import { createSkater, placeSkater, poseSkater, selfCheckSkater, setHoodie } from "./scene/skaterModel.js";
+import { bindOverlay, bindPause } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
 import { selfCheckFlip, selfCheckManual, selfCheckPop, selfCheckSlide } from "./tricks/detector.js";
@@ -46,6 +46,25 @@ scene.add(model.group);
 scene.add(skater.root);
 const sfx = createAudio();
 const menu = bindSettings(document.getElementById("menu"), (v) => sfx.setVolume(v));
+let advancedFromPause = false;
+const pause = bindPause(document.getElementById("pause"), {
+  onHoodie(hex) {
+    setHoodie(skater, hex);
+  },
+  onPick(id) {
+    if (id === "resume") pause.hide();
+    else if (id === "restart") {
+      respawnHere();
+      pause.hide();
+    } else if (id === "hoodie") {
+      /* picker is already on this row */
+    } else if (id === "advanced") {
+      pause.hide();
+      advancedFromPause = true;
+      menu.show();
+    } else if (id === "exit") location.reload();
+  },
+});
 
 const spawnMark = createSpawnMark();
 scene.add(spawnMark.group);
@@ -88,6 +107,8 @@ let optOpened = false;
 let optWas = false;
 let menuUp = false;
 let menuDown = false;
+let menuLeft = false;
+let menuRight = false;
 let menuCross = false;
 let holdDown = 0;
 let holdUp = 0;
@@ -185,8 +206,18 @@ function paintCharge(dt) {
   }
 }
 
+function menusOpen() {
+  return pause.isOpen() || menu.isOpen();
+}
+
+function closeAdvanced() {
+  menu.hide();
+  if (advancedFromPause) pause.show();
+  advancedFromPause = false;
+}
+
 function hudText() {
-  if (!menu.isOpen() && optHold > 0) return `SETTINGS  ${Math.min(99, Math.floor((optHold / MENU_HOLD) * 100))}%`;
+  if (!menusOpen() && optHold > 0) return `ADVANCED  ${Math.min(99, Math.floor((optHold / MENU_HOLD) * 100))}%`;
   if (holdDown > 0 && !firedDown) return `SET SPAWN  ${Math.min(99, Math.floor((holdDown / SPAWN_HOLD) * 100))}%`;
   if (holdUp > 0 && !firedUp) return `RESPAWN  ${Math.min(99, Math.floor((holdUp / SPAWN_HOLD) * 100))}%`;
   if (spawnFlash > 0) return spawnMsg;
@@ -224,21 +255,30 @@ function tick(now) {
   hud.hidden = !playing;
 
   const input = playing ? readPlayInput(pad, board.regular, now) : IDLE_INPUT;
-  if (playing && !menu.isOpen() && input.options) {
+  if (!playing) {
+    pause.hide();
+    menu.hide();
+    advancedFromPause = false;
+  }
+  if (playing && !menusOpen() && input.options) {
     optHold += frameDt;
     if (optHold >= MENU_HOLD && !optOpened) {
       menu.show();
       optOpened = true;
+      advancedFromPause = false;
       acc = 0;
     }
   } else if (!input.options) {
+    if (playing && !menusOpen() && optWas && !optOpened && optHold > 0 && optHold < MENU_HOLD) {
+      pause.show();
+    }
     optHold = 0;
     optOpened = false;
   }
 
   if (playing && menu.isOpen()) {
-    if (input.options && !optWas && !optOpened) menu.hide();
-    if (input.circle && !board.circleLatch) menu.hide();
+    if (input.options && !optWas && !optOpened) closeAdvanced();
+    if (input.circle && !board.circleLatch) closeAdvanced();
     board.circleLatch = input.circle;
     if (input.dpadUp && !menuUp) menu.move(-1);
     if (input.dpadDown && !menuDown) menu.move(1);
@@ -249,6 +289,24 @@ function tick(now) {
     if (input.dpadRight) dir += 1;
     if (dir) menu.nudge(dir, frameDt);
     if (input.pushRight && !menuCross) menu.confirm();
+    menuCross = input.pushRight;
+    sfx.tick(0, false, false, 0);
+    acc = 0;
+    board.prevPos.copy(board.pos);
+    board.prevQuat.copy(board.quat);
+  } else if (playing && pause.isOpen()) {
+    if (input.options && !optWas) pause.hide();
+    if (input.circle && !board.circleLatch) pause.hide();
+    board.circleLatch = input.circle;
+    if (input.dpadUp && !menuUp) pause.move(-1);
+    if (input.dpadDown && !menuDown) pause.move(1);
+    menuUp = input.dpadUp;
+    menuDown = input.dpadDown;
+    if (input.dpadLeft && !menuLeft) pause.nudgeHue(-1);
+    if (input.dpadRight && !menuRight) pause.nudgeHue(1);
+    menuLeft = input.dpadLeft;
+    menuRight = input.dpadRight;
+    if (input.pushRight && !menuCross) pause.confirm();
     menuCross = input.pushRight;
     sfx.tick(0, false, false, 0);
     acc = 0;

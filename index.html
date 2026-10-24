@@ -30,7 +30,8 @@
       {
         "imports": {
           "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+          "@jaames/iro": "https://cdn.jsdelivr.net/npm/@jaames/iro@5.5.2/dist/iro.es.js"
         }
       }
     </script>
@@ -47,6 +48,15 @@
         <span data-label="back">R back</span>
         <b data-dot="back"></b>
       </div>
+    </div>
+    <div id="pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <h2 id="pause-title">NOISSES</h2>
+      <p class="tag">You are a skateboarder. But why?</p>
+      <div data-pause-list></div>
+      <div data-hoodie hidden>
+        <div data-iro></div>
+      </div>
+      <p>↑↓ select · × confirm · ○ or Options closes · hold Options for advanced</p>
     </div>
     <div id="menu" hidden role="dialog" aria-modal="true" aria-labelledby="menu-title">
       <h2 id="menu-title">SETTINGS</h2>
