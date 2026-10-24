@@ -18,7 +18,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 
 - **□ Square** — push with the **left** foot (once per press, on the ground)
 - **× Cross** — push with the **right** foot (once per press, on the ground)
-- **Stick Y** — weight nose ↔ tail (down = tail). Board pitches with the weight.
+- **Stick Y** — back foot down lifts the nose, front foot down presses it. That second one is the nollie.
 - **Stick X** — foot sideways. In the air, **front stick L/R** scoops a flip.
 - **Ollie** — hold **R** down (tail), flick **L** up
 - **Nollie** — hold **L** down, flick **R** up
@@ -35,7 +35,7 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **R2** — turn right (ground and air)
 - **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.
 - **Hold D-pad up** — respawn at that mark (tap does nothing)
-- **Grind** — ledge lips, the two rails, and the south lip of the fountain plinth. No magnet. Weight changes 50-50 / 5-0 / nosegrind / boardslide. Pop or ride off the end to exit.
+- **Grind** — ledge lips, the two rails, and the south lip of the fountain plinth. No magnet. Back foot down is a 5-0, front foot down is a nosegrind, sideways is a boardslide or lipslide. Pop or ride off the end to exit.
 - **The spot** — one brick plaza. You spawn facing east, toward the bay. The fountain is on your left (north). Sue Bierman Park is past it. Market and Embarcadero Center are behind you. The Ferry Building is across the Embarcadero, clock tower to your right.
 - Land too tilted or too hard → **BAILED** (speed dies, board flattens)
 - Keyboard is not skating

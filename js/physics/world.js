@@ -70,8 +70,9 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   }
   const fell = stepManual(board, input, dt, !airborne, speed);
   if (fell) bail(board);
-  // Sticks down (+) load the tail → nose up → negative pitch (YXZ, +Z nose).
-  let pitchTarget = -0.5 * (front.y + back.y) * PITCH_MAX;
+  // Back foot down lifts the nose. Front foot down presses it. A nollie is that, inverted.
+  // Powerslide holds both ends, so the deck stays flat once the slide is locked.
+  let pitchTarget = board.sliding ? 0 : stancePitch(front.y, back.y);
   if (board.manual === "tail") pitchTarget = -(MANUAL_PITCH + board.balance * 0.12);
   if (board.manual === "nose") pitchTarget = MANUAL_PITCH + board.balance * 0.12;
   const pitchRate = airborne ? PITCH_FOLLOW * 0.25 : PITCH_FOLLOW;
@@ -79,6 +80,8 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
 
   const pop = detectPop(input, board, dt);
   if (pop > 0) board.vel.y += pop / BOARD_MASS;
+  // stepFlip clears trick on the ground. Put the pop name back so it survives into the air.
+  const popped = pop > 0 ? board.trick : "";
   if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
     board.vel.y += BONE_IMPULSE / BOARD_MASS;
     board.boned = true;
@@ -86,6 +89,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   if (!airborne) board.boned = false;
 
   if (!board.grinding) stepFlip(input, board, dt, airborne);
+  if (popped) board.trick = popped;
   _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
@@ -208,10 +212,11 @@ function nearestTruckDist(board, grind) {
 }
 
 function grindName(front, back, parallel) {
-  const tail = 0.5 * (front.y + back.y);
+  // Same axis as stancePitch: back foot down is tail, front foot down is nose.
+  const along = back.y - front.y;
   if (parallel < 0.45) return front.x + back.x > 0 ? "lipslide" : "boardslide";
-  if (tail > 0.32) return "5-0";
-  if (tail < -0.32) return "nosegrind";
+  if (along > 0.4) return "5-0";
+  if (along < -0.4) return "nosegrind";
   return "50-50";
 }
 
@@ -317,6 +322,14 @@ function bail(board) {
   board.bailed = 1.2;
 }
 
+/**
+ * Nose-down pitch (rad) from the feet. Back foot down → negative (nose up).
+ * Front foot down is the same pose mirrored, which is the nollie.
+ */
+export function stancePitch(frontY, backY) {
+  return (frontY - backY) * 0.5 * PITCH_MAX;
+}
+
 /** Fails loud if gravity integration is broken. */
 export function selfCheck() {
   let y = 2;
@@ -326,4 +339,8 @@ export function selfCheck() {
     y += v * FIXED_DT;
   }
   if (!(y < 0)) throw new Error("gravity self-check failed");
+  const ollie = stancePitch(0, 0.8);
+  const nollie = stancePitch(0.8, 0);
+  if (!(ollie < 0 && nollie === -ollie)) throw new Error("nollie pitch should invert the ollie");
+  if (stancePitch(0.8, 0.8) !== 0) throw new Error("even crouch should stay flat");
 }

@@ -114,7 +114,7 @@ export const WHOOSH_HZ = 520;
 export const NOISE_SHELF_HZ = 2800;
 export const NOISE_SHELF_DB = -9;
 
-/** Max board pitch from weight, rad. Tail-heavy (sticks down) raises the nose. */
+/** Max board pitch from one foot, rad. Back foot down raises the nose. Front foot down lowers it. */
 export const PITCH_MAX = 0.32;
 
 /** How fast pitch chases stick weight (1/s). */
@@ -192,7 +192,7 @@ export const SCOOP_SPEED = 9;
 /** Kick/heelflip spin (rad/s). Sign from front stick X. */
 export let FLIP_SPIN = 9;
 
-/** Shuv spin around yaw from back stick X (rad/s). */
+/** Shuv spin around yaw (rad/s). Sign is opposite the back stick so the tail follows the scoop. */
 export let SHUV_SPIN = 5.5;
 
 /** Spin bleed (1/s). */

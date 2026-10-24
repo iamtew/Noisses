@@ -60,6 +60,7 @@ export function detectPop(input, board, dt = FIXED_DT) {
 
   if ((ollie || nollie) && !board.popLatch) {
     board.popLatch = true;
+    board.trick = ollie ? "ollie" : "nollie";
     const flick = ollie
       ? Math.max(-input.frontYVel, -FLICK_SPEED)
       : Math.max(-input.backYVel, -FLICK_SPEED);
@@ -141,7 +142,8 @@ export function stepFlip(input, board, dt, airborne) {
       board.trick = front.x > 0 ? "kickflip" : "heelflip";
     }
     if (board.shuvRate === 0 && board.flickBackX > 0 && Math.abs(back.x) > SCOOP_X) {
-      board.shuvRate = Math.sign(back.x) * SHUV_SPIN;
+      // +X scoop swings the tail toward +X, which is negative yaw in YXZ.
+      board.shuvRate = -Math.sign(back.x) * SHUV_SPIN;
       board.caught = false;
       if (!board.trick) board.trick = "shuvit";
       else if (board.trick === "kickflip") board.trick = "varial kickflip";
@@ -271,5 +273,26 @@ export function selfCheckFlip() {
   );
   if (!(board.flipRate > 0) || board.trick !== "kickflip") {
     throw new Error("flip self-check: kickflip scoop missed");
+  }
+
+  const shuv = {
+    airTime: 0,
+    flip: 0,
+    flipRate: 0,
+    shuv: 0,
+    shuvRate: 0,
+    caught: true,
+    trick: "",
+    flickFrontX: 0,
+    flickBackX: FLICK_WINDOW,
+  };
+  stepFlip(
+    { front: { x: 0, y: 0 }, back: { x: 0.8, y: 0 }, frontXVel: 0, backXVel: 8 },
+    shuv,
+    FIXED_DT,
+    true,
+  );
+  if (!(shuv.shuvRate < 0) || shuv.trick !== "shuvit") {
+    throw new Error("flip self-check: shuv spun away from the back foot");
   }
 }
