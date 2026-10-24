@@ -39,8 +39,9 @@ export function setHoodie(skater, hex) {
   skater.hoodie.color.set(hex);
 }
 
-function limb(radius, mat) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.82, 1, 16), mat);
+/** Leg segment. aim() points +Y at the far joint, so nearR is the hip or knee. */
+function limb(nearR, farR, mat) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(farR, nearR, 1, 16), mat);
   mesh.castShadow = true;
   return mesh;
 }
@@ -118,22 +119,23 @@ export function createSkater() {
   armR.position.set(0.02, 0.28, -0.15);
   chest.add(torso, hood, head, armL, armR);
 
-  // Seat hangs off the back (−X). Two cheeks so it reads from the side camera.
+  // Pants. Sits in the crook: top at the hoodie hem, underside in the thigh.
   const butt = new THREE.Group();
-  const cheekGeo = new THREE.SphereGeometry(0.078, 18, 14);
-  for (const z of [0.052, -0.052]) {
+  const cheekGeo = new THREE.SphereGeometry(0.07, 20, 16);
+  for (const z of [0.036, -0.036]) {
     const cheek = new THREE.Mesh(cheekGeo, pants);
-    cheek.position.set(-0.09, 0.06, z);
-    cheek.scale.set(1.35, 1.2, 1.45);
+    cheek.position.set(-0.05, -0.04, z);
+    cheek.scale.set(1.15, 1.05, 1.25);
     cheek.castShadow = true;
     butt.add(cheek);
   }
   chest.add(butt);
 
-  const frontUpper = limb(0.04, pants);
-  const frontLower = limb(0.032, pants);
-  const backUpper = limb(0.04, pants);
-  const backLower = limb(0.032, pants);
+  // Hip is thick so the thigh meets the seat, then it thins toward the knee.
+  const frontUpper = limb(0.074, 0.034, pants);
+  const frontLower = limb(0.034, 0.026, pants);
+  const backUpper = limb(0.074, 0.034, pants);
+  const backLower = limb(0.034, 0.026, pants);
   body.add(chest, frontUpper, frontLower, backUpper, backLower);
 
   return {
@@ -195,7 +197,7 @@ export function poseSkater(skater, model, input, board, dt) {
   const weight = Math.max(0, Math.min(1, (input.front.y + input.back.y) * 0.5));
   const air = board.grounded ? 0 : 0.1;
   const hipY = 0.46 - weight * 0.08 - air;
-  const side = board.regular ? 1 : -1;
+  const side = board.regular ? -1 : 1;
   const vx = board.vel ? board.vel.x : 0;
   const vz = board.vel ? board.vel.z : 0;
   const speed = Math.hypot(vx, vz);
@@ -207,7 +209,7 @@ export function poseSkater(skater, model, input, board, dt) {
   const kickScale = 1 - skater.flossAmp * 0.55;
 
   skater.chest.position.y = hipY;
-  skater.chest.rotation.y = (board.regular ? 0 : Math.PI) + s * 0.5;
+  skater.chest.rotation.y = (board.regular ? Math.PI : 0) + s * 0.5;
   skater.body.rotation.y = -s * 0.28;
   skater.armL.rotation.z = 0.15 + s * 0.85;
   skater.armR.rotation.z = -0.15 + s * 0.85;
