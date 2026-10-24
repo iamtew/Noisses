@@ -55,8 +55,8 @@ export function createSkater() {
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
-  const pants = new THREE.MeshStandardMaterial({ color: 0x243044, roughness: 0.86 });
-  const hoodie = new THREE.MeshStandardMaterial({ color: 0xb8432e, roughness: 0.8 });
+  const pants = new THREE.MeshStandardMaterial({ color: 0x7d8ea3, roughness: 0.86 });
+  const hoodie = new THREE.MeshStandardMaterial({ color: 0x2e6fbf, roughness: 0.8 });
   const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.65 });
 
   const chest = new THREE.Group();
@@ -70,6 +70,22 @@ export function createSkater() {
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.072, 24, 16), skin);
   head.position.set(0.045, 0.4, 0);
   head.castShadow = true;
+  const ink = new THREE.MeshBasicMaterial({ color: 0x1c140f });
+  const eyeWhite = new THREE.MeshBasicMaterial({ color: 0xf3efe6 });
+  for (const z of [0.026, -0.026]) {
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), eyeWhite);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.01, 8, 6), ink);
+    pupil.position.x = 0.012;
+    white.position.set(0.058, 0.02, z);
+    white.add(pupil);
+    head.add(white);
+  }
+  // Upper arc of a torus, flipped so it reads as a smile facing +X.
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.005, 6, 14, Math.PI), ink);
+  mouth.rotation.order = "YXZ";
+  mouth.rotation.set(0, Math.PI / 2, Math.PI);
+  mouth.position.set(0.06, -0.022, 0);
+  head.add(mouth);
   const armL = bentArm(hoodie, skin);
   const armR = bentArm(hoodie, skin);
   armL.position.set(0.02, 0.28, 0.15);

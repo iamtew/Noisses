@@ -137,8 +137,8 @@ export function createBoardModel() {
     wheels.push(wheel);
   }
 
-  const shoe = new THREE.MeshStandardMaterial({ color: 0x1c1e22, roughness: 0.72 });
-  const sole = new THREE.MeshStandardMaterial({ color: 0xd5d0c6, roughness: 0.55 });
+  const shoe = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.55 });
+  const sole = new THREE.MeshStandardMaterial({ color: 0xd4893a, roughness: 0.6 });
   const shoeGeo = new THREE.CapsuleGeometry(0.026, 0.08, 4, 12);
   const soleGeo = new THREE.CapsuleGeometry(0.028, 0.09, 3, 12);
   const frontFoot = new THREE.Group();
