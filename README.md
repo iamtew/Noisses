@@ -1,6 +1,8 @@
 # Noisses
 
-Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. Not affiliated with any commercial skate game.
+Original dual-stick foot-control skate simulator in the browser. Clean-room implementation from `bootstrap.md`. It is not Session, and it is not affiliated with Session.
+
+Play it at **https://iamtew.github.io/Noisses/**. Bring a gamepad. The keyboard can watch.
 
 Phase 6–7: Embarcadero Plaza in San Francisco, cropped to skate, plus Market, the Embarcadero, the Ferry Building, and Sue Bierman Park. Synthesized Web Audio. Gamepad required.
 
@@ -41,4 +43,4 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 
 ## Deploy (GitHub Pages)
 
-Put this tree at the repo root (or `/docs`). Settings → Pages → deploy from that branch/folder. `index.html` must be the site entry.
+GitHub Pages serves `master` from the repo root. The share card is `og.png`. `index.html` is the site entry.
