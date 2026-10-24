@@ -120,6 +120,13 @@ export const PITCH_MAX = 0.32;
 /** How fast pitch chases stick weight (1/s). */
 export const PITCH_FOLLOW = 12;
 
+/** Butt spring (1/s²) and damping (1/s). Soft so a land still claps. */
+export const BUTT_STIFF = 42;
+export const BUTT_DAMP = 6;
+
+/** Butt velocity added per m/s of hip-speed change. */
+export const BUTT_KICK = 0.08;
+
 /** One foot this far down, the other near center, and you are in a manual. */
 export const MANUAL_HOLD = 0.42;
 export const MANUAL_CENTER = 0.22;

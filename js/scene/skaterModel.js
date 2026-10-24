@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { BUTT_DAMP, BUTT_KICK, BUTT_STIFF } from "../constants.js";
 
 // ponytail: posed meshes, not a ragdoll. Constraints if a bail should leave the board.
 
@@ -117,6 +118,18 @@ export function createSkater() {
   armR.position.set(0.02, 0.28, -0.15);
   chest.add(torso, hood, head, armL, armR);
 
+  // Seat hangs off the back (−X). Two cheeks so it reads from the side camera.
+  const butt = new THREE.Group();
+  const cheekGeo = new THREE.SphereGeometry(0.078, 18, 14);
+  for (const z of [0.052, -0.052]) {
+    const cheek = new THREE.Mesh(cheekGeo, pants);
+    cheek.position.set(-0.09, 0.06, z);
+    cheek.scale.set(1.35, 1.2, 1.45);
+    cheek.castShadow = true;
+    butt.add(cheek);
+  }
+  chest.add(butt);
+
   const frontUpper = limb(0.04, pants);
   const frontLower = limb(0.032, pants);
   const backUpper = limb(0.04, pants);
@@ -134,9 +147,18 @@ export function createSkater() {
     backUpper,
     backLower,
     hoodie,
+    butt,
     kick: 0,
     floss: 0,
     flossAmp: 0,
+    jigX: 0,
+    jigY: 0,
+    jigZ: 0,
+    jigVX: 0,
+    jigVY: 0,
+    jigVZ: 0,
+    prevVy: 0,
+    prevSp: 0,
   };
 }
 
@@ -207,6 +229,30 @@ export function poseSkater(skater, model, input, board, dt) {
   const flop = Math.min(1, (board.bailed || 0) / 1.2);
   skater.body.rotation.z = flop * side * 1.15;
   skater.body.position.y = -flop * 0.1;
+
+  // Cheeks lag the hips, then the spring claps them back.
+  const h = Math.min(0.05, Math.max(0.001, dt));
+  const vy = board.vel && Number.isFinite(board.vel.y) ? board.vel.y : 0;
+  skater.jigVX += -(speed - skater.prevSp) * BUTT_KICK;
+  skater.jigVY += (vy - skater.prevVy) * BUTT_KICK;
+  skater.jigVY += Math.sin(skater.floss * 2) * skater.flossAmp * 1.4 * h;
+  skater.jigVZ += Math.cos(skater.floss) * skater.flossAmp * 1.1 * h;
+  skater.prevVy = vy;
+  skater.prevSp = speed;
+  const pull = BUTT_STIFF * h;
+  skater.jigVX += -skater.jigX * pull;
+  skater.jigVY += -skater.jigY * pull;
+  skater.jigVZ += -skater.jigZ * pull;
+  const damp = Math.exp(-BUTT_DAMP * h);
+  skater.jigVX *= damp;
+  skater.jigVY *= damp;
+  skater.jigVZ *= damp;
+  skater.jigX = Math.max(-0.07, Math.min(0.07, skater.jigX + skater.jigVX * h));
+  skater.jigY = Math.max(-0.06, Math.min(0.06, skater.jigY + skater.jigVY * h));
+  skater.jigZ = Math.max(-0.05, Math.min(0.05, skater.jigZ + skater.jigVZ * h));
+  skater.butt.position.set(skater.jigX, skater.jigY, skater.jigZ);
+  skater.butt.rotation.z = skater.jigX * 5;
+  skater.butt.scale.y = 1 + skater.jigY * 6;
 }
 
 /**
@@ -256,4 +302,13 @@ export function selfCheckSkater() {
   const upright = new THREE.Euler().setFromQuaternion(skater.root.quaternion, "YXZ");
   if (Math.abs(upright.z) > 0.05) throw new Error("skater rolled with the kickflip");
   if (Math.abs(upright.y - 0.4) > 0.05) throw new Error("skater lost yaw");
+
+  board.vel.y = 0;
+  skater.prevVy = 0;
+  poseSkater(skater, model, input, board, 0.016);
+  board.vel.y = 5;
+  for (let i = 0; i < 8; i++) poseSkater(skater, model, input, board, 0.016);
+  if (!(Math.abs(skater.jigY) > 0.01)) throw new Error("butt ignored the pop");
+  for (let i = 0; i < 200; i++) poseSkater(skater, model, input, board, 0.016);
+  if (!(Math.abs(skater.jigY) < 0.005)) throw new Error("butt never settled");
 }
