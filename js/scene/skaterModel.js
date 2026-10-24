@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BUTT_DAMP, BUTT_KICK, BUTT_STIFF } from "../constants.js";
+import { BUTT_DAMP, BUTT_KICK, BUTT_STIFF, DUMPTRUCK } from "../constants.js";
 
 // ponytail: posed meshes, not a ragdoll. Constraints if a bail should leave the board.
 
@@ -254,7 +254,8 @@ export function poseSkater(skater, model, input, board, dt) {
   skater.jigZ = Math.max(-0.05, Math.min(0.05, skater.jigZ + skater.jigVZ * h));
   skater.butt.position.set(skater.jigX, skater.jigY, skater.jigZ);
   skater.butt.rotation.z = skater.jigX * 5;
-  skater.butt.scale.y = 1 + skater.jigY * 6;
+  const dump = DUMPTRUCK;
+  skater.butt.scale.set(dump, dump * (1 + skater.jigY * 6), dump);
 }
 
 /**

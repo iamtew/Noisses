@@ -226,6 +226,9 @@ export const GRIND_RIDE = 0.08;
 /** Slide friction on a grind (1/s). */
 export let GRIND_FRICTION = 0.2;
 
+/** Cheek size multiplier. 1 is the stock seat. The advanced slider owns this. */
+export let DUMPTRUCK = 1;
+
 /** Stock values. Sliders store a multiplier of these. 1 = as shipped. */
 const TUNE_BASE = {
   pop: 165,
@@ -236,6 +239,7 @@ const TUNE_BASE = {
   steer: 1.6,
   turn: 1.8,
   volume: 0.38,
+  dumptruck: 1,
 };
 
 export const TUNABLES = [
@@ -247,6 +251,7 @@ export const TUNABLES = [
   { id: "steer", label: "Steer", min: 0.4, max: 1.8 },
   { id: "turn", label: "Trigger turn", min: 0.4, max: 1.8 },
   { id: "volume", label: "Volume", min: 0, max: 1.6 },
+  { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 2.4 },
 ];
 
 const TUNE_KEY = "noisses-tune";
@@ -266,6 +271,7 @@ function publishTune() {
   STEER_RATE = TUNE_BASE.steer * tune.steer;
   TRIGGER_YAW = TUNE_BASE.turn * tune.turn;
   AUDIO_MASTER = TUNE_BASE.volume * tune.volume;
+  DUMPTRUCK = TUNE_BASE.dumptruck * tune.dumptruck;
 }
 
 export function getTune() {
@@ -315,5 +321,7 @@ export function selfCheckTune() {
   setTune("pop", 9, false);
   if (tune.pop !== 1.75) throw new Error("tune clamp");
   if (Math.abs(OLLIE_IMPULSE - TUNE_BASE.pop * 1.75) > 0.01) throw new Error("tune pop");
+  setTune("dumptruck", 9, false);
+  if (DUMPTRUCK !== 2.4) throw new Error("tune dumptruck");
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
 }
