@@ -197,10 +197,10 @@ export const SCOOP_X = 0.62;
 export const SCOOP_SPEED = 9;
 
 /** Kick/heelflip spin (rad/s). Sign from front stick X. */
-export let FLIP_SPIN = 9;
+export let FLIP_SPIN = 22.5;
 
 /** Shuv spin around yaw (rad/s). Sign is opposite the back stick so the tail follows the scoop. */
-export let SHUV_SPIN = 5.5;
+export let SHUV_SPIN = 13.75;
 
 /** Spin bleed (1/s). */
 export const FLIP_DAMP = 1.4;
@@ -232,8 +232,8 @@ export let DUMPTRUCK = 1;
 /** Stock values. Sliders store a multiplier of these. 1 = as shipped. */
 const TUNE_BASE = {
   pop: 165,
-  flip: 9,
-  shuv: 5.5,
+  flip: 22.5,
+  shuv: 13.75,
   grind: 0.2,
   push: 180,
   steer: 1.6,
