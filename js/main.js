@@ -390,7 +390,8 @@ function tick(now) {
 
   sticks.set(input, board.regular, playing && stickDebug);
   dust.step(frameDt);
-  followCamera(camera, _pos, _quat, frameDt, sun, lowCam);
+  // Rider heading, not the deck. Shuv/flip on board.quat would orbit the camera and make the body look like it counter-spins.
+  followCamera(camera, _pos, skater.root.quaternion, frameDt, sun, lowCam);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }

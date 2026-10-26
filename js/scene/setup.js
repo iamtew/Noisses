@@ -67,6 +67,7 @@ export function setupScene(canvas) {
   return { scene, camera, renderer, sun };
 }
 
+/** `quat` is rider heading (pitch/yaw/roll). Do not pass the flipping deck. */
 export function followCamera(camera, pos, quat, dt, sun, low) {
   const back = low ? CAM_LOW_BACK : CAM_BACK;
   const side = low ? CAM_LOW_SIDE : CAM_SIDE;

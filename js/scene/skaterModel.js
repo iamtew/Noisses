@@ -300,11 +300,12 @@ export function selfCheckSkater() {
   board.yaw = 0.4;
   board.roll = 0;
   board.flip = Math.PI;
+  board.shuv = Math.PI;
   placeSkater(skater, new THREE.Vector3(1, 2, 3), board);
   if (!(skater.root.position.y > 2.15)) throw new Error("skater should hang above a flipping board");
   const upright = new THREE.Euler().setFromQuaternion(skater.root.quaternion, "YXZ");
   if (Math.abs(upright.z) > 0.05) throw new Error("skater rolled with the kickflip");
-  if (Math.abs(upright.y - 0.4) > 0.05) throw new Error("skater lost yaw");
+  if (Math.abs(upright.y - 0.4) > 0.05) throw new Error("skater spun with the shuv");
 
   board.vel.y = 0;
   skater.prevVy = 0;
