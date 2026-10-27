@@ -68,7 +68,10 @@
           <div data-iro-a></div>
           <div data-color-b><div data-iro-b></div></div>
         </div>
-        <button type="button" class="row reset" data-hoodie-back>Back</button>
+        <button type="button" class="row reset" data-hoodie-back>
+          <span class="ico" style="-webkit-mask-image:url('assets/icons/logout.svg');mask-image:url('assets/icons/logout.svg')" aria-hidden="true"></span>
+          <span>Back</span>
+        </button>
       </div>
       <div data-screen="howto" hidden>
         <p class="howto" data-howto-body></p>
@@ -102,14 +105,19 @@
       <p>↑↓ select · ←→ adjust · × reset · ○ or Options closes</p>
     </div>
     <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <h1 id="gate-title" data-overlay-title>CONTROLLER REQUIRED</h1>
+      <h1 id="gate-title">
+        <span class="ico" style="-webkit-mask-image:url('assets/icons/device-gamepad-2.svg');mask-image:url('assets/icons/device-gamepad-2.svg')" aria-hidden="true"></span>
+        <span data-overlay-title>CONTROLLER REQUIRED</span>
+      </h1>
       <p data-overlay-body>
         Connect a gamepad with two analog sticks.
         This is a dual-stick foot-control skate simulator.
         Keyboard is not supported for skating.
       </p>
     </div>
-    <a id="source" href="https://github.com/iamtew/Noisses">source</a>
+    <a id="source" href="https://github.com/iamtew/Noisses"
+      ><span class="ico" style="-webkit-mask-image:url('assets/icons/brand-github.svg');mask-image:url('assets/icons/brand-github.svg')" aria-hidden="true"></span> source</a
+    >
     <script type="module" src="js/main.js"></script>
   </body>
 </html>
