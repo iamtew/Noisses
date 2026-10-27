@@ -1,5 +1,6 @@
 import {
   CATCH_ANGLE,
+  CATCH_LAND,
   FIXED_DT,
   MANUAL_CENTER,
   MANUAL_CORRECT,
@@ -299,15 +300,42 @@ export function selfCheckPop() {
   }
 }
 
-function nearTurns(angle, turns, step = Math.PI * 2) {
-  if (!turns) return Math.abs(angle) < CATCH_ANGLE;
+function nearTurns(angle, turns, step = Math.PI * 2, slack = CATCH_ANGLE) {
+  if (!turns) return Math.abs(angle) < slack;
   const need = turns * step;
   const err = Math.abs(Math.abs(angle) - need);
-  return Math.abs(angle) > need * 0.45 && err < CATCH_ANGLE;
+  return Math.abs(angle) > need * 0.45 && err < slack;
+}
+
+function spinDelta(board) {
+  return {
+    flip: board.flip - (board.flipBase || 0),
+    shuv: board.shuv - (board.shuvBase || 0),
+  };
+}
+
+/** Snap to the trick's turns. Deltas are from applySpin so leftover 180 shuv does not block. */
+export function tryCatch(board, slack = CATCH_ANGLE) {
+  if (board.caught) return true;
+  const ft = board.flipTurns || 0;
+  const st = board.shuvTurns || 0;
+  if (!ft && !st) return false;
+  const d = spinDelta(board);
+  if (!nearTurns(d.flip, ft, Math.PI * 2, slack) || !nearTurns(d.shuv, st, Math.PI, slack)) {
+    return false;
+  }
+  board.flip = (board.flipBase || 0) + (ft ? ft * Math.PI * 2 * Math.sign(d.flip || 1) : 0);
+  board.shuv = (board.shuvBase || 0) + (st ? st * Math.PI * Math.sign(d.shuv || 1) : 0);
+  board.flipRate = 0;
+  board.shuvRate = 0;
+  board.caught = true;
+  return true;
 }
 
 function applySpin(board, row) {
   if (!row) return;
+  board.flipBase = board.flip;
+  board.shuvBase = board.shuv;
   if (row.flip) board.flipRate = row.flip * FLIP_SPIN;
   if (row.shuv) board.shuvRate = row.shuv * SHUV_SPIN;
   board.flipTurns = row.flipTurns || 0;
@@ -364,23 +392,7 @@ export function stepFlip(input, board, dt, airborne) {
   board.flipRate *= Math.exp(-FLIP_DAMP * dt);
   board.shuvRate *= Math.exp(-FLIP_DAMP * dt);
 
-  if (!board.caught) {
-    const ft = board.flipTurns || 0;
-    const st = board.shuvTurns || 0;
-    if (nearTurns(board.flip, ft) && nearTurns(board.shuv, st, Math.PI)) {
-      if (ft) {
-        const need = ft * Math.PI * 2 * Math.sign(board.flip || 1);
-        board.flip = need;
-      } else board.flip = 0;
-      if (st) {
-        const need = st * Math.PI * Math.sign(board.shuv || 1);
-        board.shuv = need;
-      } else board.shuv = 0;
-      board.flipRate = 0;
-      board.shuvRate = 0;
-      board.caught = true;
-    }
-  }
+  tryCatch(board);
 }
 
 /**
@@ -529,4 +541,41 @@ export function selfCheckFlip() {
   if (Math.abs(Math.abs(shuvBoard.shuv) - Math.PI) > 0.05) {
     throw new Error("flip self-check: shove-it should rest at 180 on the deck");
   }
+
+  const leftover = {
+    flip: Math.PI * 2 - 0.1,
+    flipRate: 0,
+    shuv: Math.PI,
+    shuvRate: 0,
+    flipBase: 0,
+    shuvBase: Math.PI,
+    caught: false,
+    flipTurns: 1,
+    shuvTurns: 0,
+    trickRow: matchFlip("normal", "S", "W", false, true),
+  };
+  if (!tryCatch(leftover)) throw new Error("flip self-check: leftover 180 must not block a kickflip catch");
+
+  const tre = {
+    flip: 3,
+    shuv: 3,
+    flipBase: 0,
+    shuvBase: 0,
+    flipTurns: 1,
+    shuvTurns: 2,
+    caught: false,
+    trickRow: matchFlip("normal", "W", "W", false, true),
+  };
+  if (!tryCatch(tre, CATCH_LAND)) throw new Error("flip self-check: 360 flip should land-catch past halfway");
+  const early = {
+    flip: 0.5,
+    shuv: 0,
+    flipBase: 0,
+    shuvBase: 0,
+    flipTurns: 1,
+    shuvTurns: 0,
+    caught: false,
+    trickRow: leftover.trickRow,
+  };
+  if (tryCatch(early, CATCH_LAND)) throw new Error("flip self-check: 10% kickflip must still bail");
 }

@@ -265,6 +265,9 @@ export const FLIP_DAMP = 1.4;
 /** Land/catch if flip (or shuv) is this close to a full turn, rad. ~35°. */
 export const CATCH_ANGLE = 0.6;
 
+/** Land snap if past 45% of the trick, even when short of the target (rad of allowed error). */
+export const CATCH_LAND = 8;
+
 /** Stick |Y| that counts as planted for a catch. */
 export const CATCH_STICK = 0.28;
 

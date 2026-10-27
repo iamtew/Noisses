@@ -7,6 +7,7 @@ import {
   BAIL_PITCH,
   BAIL_ROLL,
   CATCH_ANGLE,
+  CATCH_LAND,
   BOARD_MASS,
   BONE_IMPULSE,
   FIXED_DT,
@@ -36,9 +37,10 @@ import {
   WHEEL_RADIUS,
 } from "../constants.js";
 import { grindFric, grindLabel, matchGrind, stickDir, updateRide } from "../tricks/catalog.js";
-import { detectPop, feetSplit, stepFlip, stepManual, wrapPi } from "../tricks/detector.js";
+import { detectPop, feetSplit, stepFlip, stepManual, tryCatch, wrapPi } from "../tricks/detector.js";
 
 const DOWN = new THREE.Vector3(0, -1, 0);
+const UP = new THREE.Vector3(0, 1, 0);
 const _origin = new THREE.Vector3();
 const _forward = new THREE.Vector3();
 const _ride = new THREE.Vector3();
@@ -65,6 +67,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   // L2 left, R2 right. Was R2−L2 and air-only; that felt inverted and dead on the pad.
   const lean = (input.l2 || 0) - (input.r2 || 0);
   const turn = STEER_RATE * Math.min(speed, 2) + STEER_PIVOT;
+  const yaw0 = board.yaw;
   board.yaw += lean * TRIGGER_YAW * (airborne ? 1 : turn / STEER_PIVOT) * dt;
   if (airborne) {
     // Front X is the scoop. Lean only from the back foot.
@@ -74,6 +77,8 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
     board.yaw += input.steer * turn * dt;
     board.roll += (0 - board.roll) * (1 - Math.exp(-PITCH_FOLLOW * dt));
   }
+  const dYaw = board.yaw - yaw0;
+  if (!airborne && !board.sliding) yawVel(board.vel, dYaw);
   const fell = stepManual(board, input, dt, !airborne, speed);
   if (fell) bail(board);
   // Back 6 o'clock lifts the nose. Front 12 o'clock presses it.
@@ -177,15 +182,15 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   }
 
   if (grounded && !board.wasGrounded) {
+    const trickLand = tryCatch(board, CATCH_LAND);
     const ugly =
-      Math.abs(board.pitch) > BAIL_PITCH ||
-      Math.abs(board.roll) > BAIL_ROLL ||
       -board.vel.y > BAIL_DOWN ||
+      (!trickLand && (Math.abs(board.pitch) > BAIL_PITCH || Math.abs(board.roll) > BAIL_ROLL)) ||
       (!board.caught &&
-        (Math.abs(wrapPi(board.flip)) > CATCH_ANGLE ||
-          Math.abs(wrapPi(board.shuv)) > CATCH_ANGLE ||
-          Math.abs(board.flip) > 0.35 ||
-          Math.abs(board.shuv) > 0.35));
+        (Math.abs(wrapPi(board.flip - (board.flipBase || 0))) > CATCH_ANGLE ||
+          Math.abs(wrapPi(board.shuv - (board.shuvBase || 0))) > CATCH_ANGLE ||
+          Math.abs(board.flip - (board.flipBase || 0)) > 0.35 ||
+          Math.abs(board.shuv - (board.shuvBase || 0)) > 0.35));
     if (ugly) bail(board);
   }
   board.wasGrounded = grounded;
@@ -351,6 +356,10 @@ function bail(board) {
   board.bailed = 1.2;
 }
 
+function yawVel(vel, dYaw) {
+  if (dYaw) vel.applyAxisAngle(UP, dYaw);
+}
+
 /**
  * Nose-down pitch (rad) from the feet. 12 o'clock = nose, 6 o'clock = tail.
  * Back 6 lifts the nose. Front 12 drops it. Split 12+6 is flat.
@@ -373,4 +382,9 @@ export function selfCheck() {
   const nollie = stancePitch(-0.8, 0);
   if (!(ollie < 0 && nollie === -ollie)) throw new Error("nollie pitch should invert the ollie");
   if (stancePitch(-0.8, 0.8) !== 0) throw new Error("front 12 and back 6 should stay flat");
+  const carve = new THREE.Vector3(0, 0, 2);
+  yawVel(carve, Math.PI / 2);
+  if (Math.abs(carve.x - 2) > 0.01 || Math.abs(carve.z) > 0.01) {
+    throw new Error("yaw should carry velocity with the nose");
+  }
 }
