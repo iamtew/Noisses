@@ -28,13 +28,21 @@ function gritMap() {
 function popsicleShape() {
   const halfW = 0.102;
   const shaft = 0.3;
+  const steps = 20;
   const s = new THREE.Shape();
   s.moveTo(-halfW, -shaft);
   s.absarc(0, -shaft, halfW, Math.PI, 0, false);
-  s.lineTo(halfW, shaft);
+  for (let i = 1; i <= steps; i++) s.lineTo(halfW, -shaft + (2 * shaft * i) / steps);
   s.absarc(0, shaft, halfW, 0, Math.PI, false);
+  for (let i = 1; i < steps; i++) s.lineTo(-halfW, shaft - (2 * shaft * i) / steps);
   s.closePath();
   return s;
+}
+
+function kickLift(y) {
+  const t = Math.min(1, Math.max(0, (Math.abs(y) - 0.22) / 0.2));
+  const s = t * t * (3 - 2 * t);
+  return s * s * 0.058;
 }
 
 function extrudeDeck(depth, bevel) {
@@ -48,10 +56,7 @@ function extrudeDeck(depth, bevel) {
   });
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const kick = Math.max(0, (Math.abs(y) - 0.26) / 0.14);
-    pos.setZ(i, z + kick * kick * 0.07);
+    pos.setZ(i, pos.getZ(i) + kickLift(pos.getY(i)));
   }
   geo.rotateX(-Math.PI / 2);
   geo.computeVertexNormals();
