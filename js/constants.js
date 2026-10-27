@@ -39,6 +39,14 @@ export const RIDE_HEIGHT = 0.11;
 /** Wheel ray length (m). Long enough to hit from spawn height. */
 export const RAY_FAR = 4;
 
+/**
+ * Start wheel rays this far above the axle (m).
+ * A pad taller than ride height sits above the wheels if you roll in at brick
+ * height; a ray from the axle hits the brick (or the pad interior) and the
+ * board clips. Walker already rays from y=6. This is that, on the deck.
+ */
+export const WHEEL_RAY_LIFT = 1.2;
+
 /** Rescue ray from above if wheels miss (m). Recovers a fall-through. */
 export const RESCUE_RAY = 8;
 

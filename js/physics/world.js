@@ -27,6 +27,7 @@ import {
   PUSH_IMPULSE,
   RAY_FAR,
   RESCUE_RAY,
+  WHEEL_RAY_LIFT,
   RIDE_HEIGHT,
   STEER_PIVOT,
   STEER_RATE,
@@ -136,11 +137,13 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   _ray.far = RAY_FAR;
   for (const w of WHEEL_LOCAL) {
     _origin.set(w.x, w.y, w.z).applyQuaternion(board.quat).add(board.pos);
+    _origin.y += WHEEL_RAY_LIFT;
     _ray.set(_origin, DOWN);
     const hit = _ray.intersectObjects(floorList, false)[0];
     if (!hit) continue;
-    if (hit.distance <= RIDE_HEIGHT + 0.04) grounded = true;
-    const need = RIDE_HEIGHT - hit.distance;
+    const dist = hit.distance - WHEEL_RAY_LIFT;
+    if (dist <= RIDE_HEIGHT + 0.04) grounded = true;
+    const need = RIDE_HEIGHT - dist;
     if (need > lift) lift = need;
   }
 
@@ -268,7 +271,8 @@ export function resolveSolids(board, solids) {
 }
 
 function tryLockGrind(board, grinds, front, back) {
-  if (board.grounded) return;
+  // Pads glue the wheels from a high ray, so grounded is often true on the lip.
+  // Lock from the trucks; a rail still needs the hop because it sits above brick.
   if (!board.caught && Math.abs(board.flip) > 0.45) return;
   for (const g of grinds) {
     if (nearestTruckDist(board, g) > GRIND_LOCK) continue;
