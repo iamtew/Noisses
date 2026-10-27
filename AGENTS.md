@@ -14,7 +14,16 @@ Code: [`js/input/clanker.js`](js/input/clanker.js). Rule: [`.cursor/rules/clanke
 
 Stick HUD is on. **Drag a pad** for analog. Two pointers can hold both feet. Release recenters. WASD / IJKL fill the stick you are not dragging.
 
-Ollie: hold the right pad down (back foot), flick the left pad up. Goofy swaps that.
+There is no Goofy. Stance is Regular or Switch. Pause → Options Stance and ○ on the ground both flip it. It persists.
+
+| | Left on nose | Right on nose |
+|---|---|---|
+| Back pops | Regular | Switch |
+| Front pops | Nollie | Fakie |
+
+Fakie is rolling tail-first. Nollie is switch + fakie.
+
+Regular ollie: right pad down, left pad up. Kickflip: same hold, left pad right. Heelflip: left pad left. Nollie ollie: left pad down, right pad up.
 
 ## Keys
 
@@ -23,7 +32,7 @@ Ollie: hold the right pad down (back foot), flick the left pad up. Goofy swaps t
 | WASD | left stick |
 | IJKL | right stick |
 | F / Space | □ push / × push, jump, confirm |
-| E / Q | △ mount / ○ stance, back |
+| E / Q | △ mount / ○ switch, back |
 | Escape | Options (tap pause, hold advanced) |
 | R | R1 low cam |
 | U / O | L2 / R2 |
