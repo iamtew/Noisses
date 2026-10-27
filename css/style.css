@@ -49,7 +49,7 @@ body {
   display: none;
 }
 
-#sticks .pad {
+.pad {
   position: relative;
   width: 72px;
   height: 72px;
@@ -58,7 +58,15 @@ body {
   background: rgba(0, 0, 0, 0.35);
 }
 
-#sticks .pad span {
+.pad canvas {
+  position: absolute;
+  inset: 0;
+  width: 72px;
+  height: 72px;
+  pointer-events: none;
+}
+
+.pad span {
   position: absolute;
   left: 0;
   right: 0;
@@ -70,15 +78,25 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-#sticks .pad b {
+.pad [data-hub],
+.pad [data-dot] {
   position: absolute;
   left: 50%;
   top: 50%;
+  border-radius: 50%;
+}
+
+.pad [data-hub] {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+}
+
+.pad [data-dot] {
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  border-radius: 50%;
-  background: #eee;
+  z-index: 1;
 }
 
 #gate {
@@ -238,7 +256,7 @@ body {
 #source {
   position: fixed;
   right: 0.9rem;
-  bottom: 0.55rem;
+  bottom: 5.6rem;
   z-index: 3;
   color: #e7e1d6;
   font-size: 0.75rem;
