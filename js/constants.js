@@ -78,12 +78,13 @@ export const CAM_BACK = 2.45;
 
 /**
  * Max on-board side offset (m) at 0% / 100% of Cam offset.
- * 50% is dead-center. Default 35% is 0.3 × this (~0.6 m). Backside = board +X.
+ * 50% is dead-center. 35% is the backside d-pad detent (~0.6 m). Default is 65% frontside.
+ * Backside = board +X.
  */
 export const CAM_OFFSET_MAX = 2;
 export const CAM_OFFSET_STOCK = 0.35;
 /** Signed meters, backside-positive. The advanced slider publishes this. */
-export let CAM_OFFSET = (0.5 - CAM_OFFSET_STOCK) * 2 * CAM_OFFSET_MAX;
+export let CAM_OFFSET = (0.5 - (1 - CAM_OFFSET_STOCK)) * 2 * CAM_OFFSET_MAX;
 
 /** Follow camera height (m). */
 export const CAM_HEIGHT = 1.05;
@@ -341,7 +342,7 @@ export const TUNABLES = [
   { id: "steer", label: "Steer", min: 0.4, max: 1.8 },
   { id: "turn", label: "Trigger turn", min: 0.4, max: 1.8 },
   // 50% is today's centered follow cam. 0% full backside, 100% full frontside.
-  { id: "camOffset", label: "Cam offset", min: 0, max: 1, default: CAM_OFFSET_STOCK },
+  { id: "camOffset", label: "Cam offset", min: 0, max: 1, default: 1 - CAM_OFFSET_STOCK },
   { id: "volume", label: "Volume", min: 0, max: 1.6 },
   { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 3 },
 ];
