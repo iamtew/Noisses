@@ -1,6 +1,5 @@
 import {
   CATCH_ANGLE,
-  CATCH_STICK,
   FIXED_DT,
   MANUAL_CENTER,
   MANUAL_CORRECT,
@@ -114,7 +113,7 @@ export function selfCheckPop() {
 
 /**
  * Front stick X scoop → kickflip (+) / heelflip (−).
- * Back stick X scoop → shuv. Catch = both sticks in the dead zone near a full turn.
+ * Back stick X scoop → shuv. Catch is automatic near a full turn.
  */
 export function stepFlip(input, board, dt, airborne) {
   const front = input.front || { x: 0, y: 0 };
@@ -156,13 +155,12 @@ export function stepFlip(input, board, dt, airborne) {
   board.flipRate *= Math.exp(-FLIP_DAMP * dt);
   board.shuvRate *= Math.exp(-FLIP_DAMP * dt);
 
-  const centered =
-    Math.hypot(front.x, front.y) < CATCH_STICK &&
-    Math.hypot(back.x, back.y) < CATCH_STICK;
-  if (centered && !board.caught) {
+  if (!board.caught) {
     const flipErr = wrapPi(board.flip);
     const shuvErr = wrapPi(board.shuv);
-    if (Math.abs(flipErr) < CATCH_ANGLE && Math.abs(shuvErr) < CATCH_ANGLE) {
+    // Must have actually spun. wrapPi(0) is 0, so a fresh scoop would snap otherwise.
+    const spun = Math.abs(board.flip) > 2 || Math.abs(board.shuv) > 2;
+    if (spun && Math.abs(flipErr) < CATCH_ANGLE && Math.abs(shuvErr) < CATCH_ANGLE) {
       board.flip -= flipErr;
       board.shuv -= shuvErr;
       board.flipRate = 0;
@@ -295,4 +293,32 @@ export function selfCheckFlip() {
   if (!(shuv.shuvRate < 0) || shuv.trick !== "shuvit") {
     throw new Error("flip self-check: shuv spun away from the back foot");
   }
+
+  const early = {
+    airTime: 1,
+    flip: 0.2,
+    flipRate: 20,
+    shuv: 0,
+    shuvRate: 0,
+    caught: false,
+    trick: "kickflip",
+    flickFrontX: 0,
+    flickBackX: 0,
+  };
+  stepFlip({ front: { x: 0.9, y: 0 }, back: { x: 0.9, y: 0 } }, early, FIXED_DT, true);
+  if (early.caught) throw new Error("flip self-check: catch ate the scoop");
+
+  const late = {
+    airTime: 1,
+    flip: Math.PI * 2 - 0.1,
+    flipRate: 4,
+    shuv: 0,
+    shuvRate: 0,
+    caught: false,
+    trick: "kickflip",
+    flickFrontX: 0,
+    flickBackX: 0,
+  };
+  stepFlip({ front: { x: 0.9, y: 0 }, back: { x: 0.9, y: 0 } }, late, FIXED_DT, true);
+  if (!late.caught) throw new Error("flip self-check: catch should be automatic");
 }

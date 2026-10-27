@@ -223,9 +223,6 @@ export let SHUV_SPIN = 13.75;
 /** Spin bleed (1/s). */
 export const FLIP_DAMP = 1.4;
 
-/** Sticks inside this radius = trying to catch. */
-export const CATCH_STICK = 0.28;
-
 /** Land/catch if flip (or shuv) is this close to a full turn, rad. ~35°. */
 export const CATCH_ANGLE = 0.6;
 
