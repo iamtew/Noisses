@@ -275,13 +275,41 @@ export function selfCheckPop() {
   if (!(nollieKick > 0) || board.trick !== "nollie kickflip") {
     throw new Error("pop self-check: nollie kickflip is front 12 o'clock + back left");
   }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  board.flickBack = 0;
+  board.flickBackX = 0;
+  board.ride = "normal";
+  const shove = detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: 0, y: 0.8 },
+      frontYVel: 0,
+      backYVel: 0,
+      frontXVel: 0,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (!(shove > 0) || board.trick !== "BS pop shove-it") {
+    throw new Error("pop self-check: BS pop shove-it is back down + front down");
+  }
 }
 
-function nearTurns(angle, turns) {
+function nearTurns(angle, turns, step = Math.PI * 2) {
   if (!turns) return Math.abs(angle) < CATCH_ANGLE;
-  const need = turns * Math.PI * 2;
+  const need = turns * step;
   const err = Math.abs(Math.abs(angle) - need);
   return Math.abs(angle) > need * 0.45 && err < CATCH_ANGLE;
+}
+
+function bakeShuv(board) {
+  board.yaw = (board.yaw || 0) + board.shuv;
+  board.shuv = 0;
+  board.shuvRate = 0;
 }
 
 function applySpin(board, row) {
@@ -318,10 +346,9 @@ export function stepFlip(input, board, dt, airborne) {
     if (board.trickRow && !board.spinApplied) return;
     board.spinApplied = false;
     if (board.caught || (Math.abs(board.flip) < 0.05 && Math.abs(board.shuv) < 0.05)) {
+      bakeShuv(board);
       board.flip = 0;
       board.flipRate = 0;
-      board.shuv = 0;
-      board.shuvRate = 0;
       board.caught = true;
       board.trick = "";
       board.trickRow = null;
@@ -345,17 +372,17 @@ export function stepFlip(input, board, dt, airborne) {
   if (!board.caught) {
     const ft = board.flipTurns || 0;
     const st = board.shuvTurns || 0;
-    if (nearTurns(board.flip, ft) && nearTurns(board.shuv, st)) {
+    if (nearTurns(board.flip, ft) && nearTurns(board.shuv, st, Math.PI)) {
       if (ft) {
         const need = ft * Math.PI * 2 * Math.sign(board.flip || 1);
         board.flip = need;
       } else board.flip = 0;
       if (st) {
-        const need = st * Math.PI * 2 * Math.sign(board.shuv || 1);
+        const need = st * Math.PI * Math.sign(board.shuv || 1);
         board.shuv = need;
       } else board.shuv = 0;
       board.flipRate = 0;
-      board.shuvRate = 0;
+      bakeShuv(board);
       board.caught = true;
     }
   }
@@ -487,4 +514,24 @@ export function selfCheckFlip() {
   };
   stepFlip({ front: { x: -0.9, y: 0 }, back: { x: 0, y: 0 } }, late, FIXED_DT, true);
   if (!late.caught) throw new Error("flip self-check: catch should be automatic");
+
+  const shuvBoard = {
+    airTime: 0,
+    yaw: 0,
+    flip: 0,
+    flipRate: 0,
+    shuv: 0,
+    shuvRate: 0,
+    caught: false,
+    trick: "BS pop shove-it",
+    trickRow: matchFlip("normal", "S", "S", false, true),
+    spinApplied: false,
+  };
+  const idle = { front: { x: 0, y: 0.8 }, back: { x: 0, y: 0.8 } };
+  for (let i = 0; i < 50 && !shuvBoard.caught; i++) stepFlip(idle, shuvBoard, FIXED_DT, true);
+  if (!shuvBoard.caught) throw new Error("flip self-check: shove-it should catch at 180");
+  if (Math.abs(Math.abs(shuvBoard.yaw) - Math.PI) > 0.05) {
+    throw new Error("flip self-check: shove-it should bake 180 into yaw");
+  }
+  if (Math.abs(shuvBoard.shuv) > 1e-6) throw new Error("flip self-check: shove-it shuv should bake away");
 }

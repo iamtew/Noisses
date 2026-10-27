@@ -93,7 +93,7 @@ const NORMAL_FLIPS = [
   flipRow("ollie", "normal", "high", "S", "N"),
   flipRow("kickflip", "normal", "high", "S", "W", { flip: -1 }),
   flipRow("heelflip", "normal", "high", "S", "E", { flip: 1 }),
-  flipRow("BS pop shove-it", "normal", "high", "S", "S", { aFlick: true, bFlick: false, shuv: 1 }),
+  flipRow("BS pop shove-it", "normal", "high", "S", "S", { shuv: 1 }),
   flipRow("FS pop shove-it", "normal", "high", "S", "N", { aFlick: true, bFlick: false, shuv: -1 }),
   // ponytail: mid/low ① diagonals guessed from a mushy screenshot. Correct a cell, not the matcher.
   flipRow("varial flip", "normal", "mid", "SW", "W", { flip: -1, shuv: 1 }),
@@ -120,7 +120,7 @@ const SWITCH_FLIPS = [
   flipRow("ollie", "switch", "high", "S", "S"),
   flipRow("kickflip", "switch", "high", "S", "E", { flip: 1 }),
   flipRow("heelflip", "switch", "high", "S", "W", { flip: -1 }),
-  flipRow("BS pop shove-it", "switch", "high", "S", "S", { aFlick: true, bFlick: false, shuv: 1 }),
+  flipRow("BS pop shove-it", "switch", "high", "S", "S", { shuv: 1 }),
   flipRow("FS pop shove-it", "switch", "high", "S", "N", { aFlick: true, bFlick: false, shuv: -1 }),
   ...NORMAL_FLIPS.filter((r) => r.pop !== "high").map((r) => remapRow(r, "switch", {}, XY_FLIP)),
 ];
@@ -301,6 +301,8 @@ export function selfCheckCatalog() {
   if (!ollie || ollie.name !== "ollie") throw new Error("catalog normal ollie");
   const kick = matchFlip("normal", "S", "W", false, true);
   if (!kick || kick.name !== "kickflip") throw new Error("catalog kickflip");
+  const shove = matchFlip("normal", "S", "S", false, true);
+  if (!shove || shove.name !== "BS pop shove-it") throw new Error("catalog BS pop shove-it");
   const heel = matchFlip("normal", "S", "E", false, true);
   if (!heel || heel.name !== "heelflip") throw new Error("catalog heelflip");
   const fakie = matchFlip("fakie", "N", "S", false, true);

@@ -177,9 +177,11 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
       Math.abs(board.pitch) > BAIL_PITCH ||
       Math.abs(board.roll) > BAIL_ROLL ||
       -board.vel.y > BAIL_DOWN ||
-      Math.abs(wrapPi(board.flip)) > CATCH_ANGLE ||
-      Math.abs(wrapPi(board.shuv)) > CATCH_ANGLE ||
-      (!board.caught && (Math.abs(board.flip) > 0.35 || Math.abs(board.shuv) > 0.35));
+      (!board.caught &&
+        (Math.abs(wrapPi(board.flip)) > CATCH_ANGLE ||
+          Math.abs(wrapPi(board.shuv)) > CATCH_ANGLE ||
+          Math.abs(board.flip) > 0.35 ||
+          Math.abs(board.shuv) > 0.35));
     if (ugly) bail(board);
   }
   board.wasGrounded = grounded;
