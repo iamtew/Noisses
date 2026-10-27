@@ -8,7 +8,7 @@ export const HOWTO_BODY =
   "L2 / R2 turn. R1 low cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
   "Ollie: hold the back stick down, flick the front stick up. Catch is automatic near a full turn.\n" +
   "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders.\n" +
-  "Pause → Options is hoodie, day/night, and those sliders. Time scale lives in advanced.\n" +
+  "Pause → Options is hoodie, day/night, audio, and those sliders. Time scale lives in advanced.\n" +
   "△ steps off the board. It lives in the left hand, graphic out, truck in the fist. △ again gets back on.\n" +
   "Off the board the left stick walks, the right stick swings the camera, × jumps, and ×× runs.\n" +
   "L3+R3 together paints the sticks: left red, right purple.";

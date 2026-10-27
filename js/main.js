@@ -65,6 +65,9 @@ const pause = bindPause(document.getElementById("pause"), {
   onHoodie(look) {
     setHoodie(skater, look);
   },
+  onVolume(v) {
+    sfx.setVolume(v);
+  },
   onPick(id) {
     if (id === "resume") pause.hide();
     else if (id === "restart") {
@@ -372,6 +375,8 @@ function tick(now) {
     if (input.dpadLeft) dir -= 1;
     if (input.dpadRight) dir += 1;
     if (dir) menu.nudge(dir, frameDt);
+    const stickY = Math.abs(input.ly) >= Math.abs(input.ry) ? input.ly : input.ry;
+    menu.tick(frameDt, stickY);
     if (input.pushRight && !menuCross) menu.confirm();
     menuCross = input.pushRight;
     walker.jumpArm = 0;
@@ -395,7 +400,7 @@ function tick(now) {
     menuCross = input.pushRight;
     walker.jumpArm = 0;
     const stickY = Math.abs(input.ly) >= Math.abs(input.ry) ? input.ly : input.ry;
-    pause.tick(frameDt, stickY);
+    pause.tick(frameDt, stickY, input.lx);
     sfx.tick(0, false, false, 0);
     acc = 0;
     board.prevPos.copy(board.pos);

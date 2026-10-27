@@ -294,6 +294,9 @@ export const TUNABLES = [
   { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 3 },
 ];
 
+/** Advanced menu. Volume lives under Options → Audio. */
+export const ADVANCED_TUNABLES = TUNABLES.filter((t) => t.id !== "volume");
+
 const TUNE_KEY = "noisses-tune";
 const tune = Object.fromEntries(TUNABLES.map((t) => [t.id, 1]));
 
@@ -333,11 +336,14 @@ export function setTune(id, value, persist = true) {
   }
 }
 
-export function resetTune() {
-  for (const t of TUNABLES) tune[t.id] = 1;
+export function resetTune(ids) {
+  for (const t of TUNABLES) {
+    if (ids && !ids.includes(t.id)) continue;
+    tune[t.id] = 1;
+  }
   publishTune();
   try {
-    localStorage.removeItem(TUNE_KEY);
+    localStorage.setItem(TUNE_KEY, JSON.stringify(tune));
   } catch {
     /* private window */
   }

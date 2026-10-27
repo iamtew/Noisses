@@ -1,12 +1,17 @@
 import iro from "@jaames/iro";
 import {
+  AUDIO_MASTER,
   MENU_SCROLL,
+  TUNABLES,
   formatClock,
+  formatTune,
   getSkyClock,
+  getTune,
   parseClock,
   persistSkyClock,
   setSkyAzimuth,
   setSkyMinutes,
+  setTune,
 } from "../constants.js";
 import {
   HOODIE_PATTERNS,
@@ -59,14 +64,18 @@ const ITEMS = [
 const OPTION_ITEMS = [
   { id: "hoodie", label: "Hoodie", icon: "shirt" },
   { id: "daynight", label: "Day / Night", icon: "sun-moon" },
+  { id: "audio", label: "Audio", icon: "volume" },
   { id: "advanced", label: "Advanced settings", icon: "adjustments-horizontal" },
 ];
+
+const VOLUME = TUNABLES.find((t) => t.id === "volume");
 
 const TITLES = {
   root: "NOISSES",
   options: "OPTIONS",
   hoodie: "HOODIE",
   daynight: "DAY / NIGHT",
+  audio: "AUDIO",
   howto: "HOW TO PLAY",
   tricks: "TRICK LIST",
 };
@@ -76,6 +85,7 @@ const HINTS = {
   options: "↑↓ select · × open · ○ back",
   hoodie: "↑↓ select · ←→ pattern or hue · ○ back",
   daynight: "↑↓ select · ←→ time or sun angle · ○ back",
+  audio: "↑↓ select · ←→ volume · × restore · ○ back",
   howto: "↑↓ select · sticks scroll · × open · ○ back",
   tricks: "↑↓ pick a trick · sticks scroll · ○ back · paths are Regular (Goofy swaps the sticks)",
 };
@@ -105,6 +115,7 @@ export function bindPause(root, hooks) {
     options: root.querySelector("[data-screen='options']"),
     hoodie: root.querySelector("[data-screen='hoodie']"),
     daynight: root.querySelector("[data-screen='daynight']"),
+    audio: root.querySelector("[data-screen='audio']"),
     howto: root.querySelector("[data-screen='howto']"),
     tricks: root.querySelector("[data-screen='tricks']"),
   };
@@ -119,6 +130,8 @@ export function bindPause(root, hooks) {
   const timeInput = root.querySelector("[data-clock-input]");
   const azBtn = root.querySelector("[data-clock-az]");
   const clockBack = root.querySelector("[data-clock-back]");
+  const volBtn = root.querySelector("[data-audio-volume]");
+  const audioBack = root.querySelector("[data-audio-back]");
   const howtoBody = root.querySelector("[data-howto-body]");
   const howtoList = root.querySelector("[data-howto-list]");
   const trickList = root.querySelector("[data-trick-list]");
@@ -133,6 +146,7 @@ export function bindPause(root, hooks) {
   let optionIndex = 0;
   let hoodieIndex = 0;
   let clockIndex = 0;
+  let audioIndex = 0;
   let howtoIndex = 0;
   let trickIndex = 0;
   let look = loadHoodie();
@@ -188,12 +202,17 @@ export function bindPause(root, hooks) {
     paint();
   });
   timeInput.addEventListener("pointerdown", (e) => e.stopPropagation());
-  timeInput.addEventListener("change", () => {
+  function commitClock() {
     const mins = parseClock(timeInput.value);
-    if (mins == null) return;
+    if (mins == null) {
+      timeInput.value = formatClock(getSkyClock().minutes);
+      return;
+    }
     setSkyMinutes(mins);
     paint();
-  });
+  }
+  timeInput.addEventListener("change", commitClock);
+  timeInput.addEventListener("blur", commitClock);
   azBtn.addEventListener("pointerdown", (e) => {
     clockIndex = 1;
     const track = azBtn.querySelector(".track");
@@ -212,6 +231,33 @@ export function bindPause(root, hooks) {
     paint();
   });
   clockBack.addEventListener("pointerdown", () => go("options"));
+
+  volBtn.addEventListener("pointerdown", (e) => {
+    audioIndex = 0;
+    if (e.target.closest(".tune-reset")) {
+      setTune("volume", 1);
+      hooks.onVolume(AUDIO_MASTER);
+      paint();
+      return;
+    }
+    const track = volBtn.querySelector(".track");
+    const box = track.getBoundingClientRect();
+    const t = box.width > 0 ? (e.clientX - box.left) / box.width : 0;
+    setTune("volume", VOLUME.min + Math.min(1, Math.max(0, t)) * (VOLUME.max - VOLUME.min));
+    hooks.onVolume(AUDIO_MASTER);
+    paint();
+    volBtn.setPointerCapture(e.pointerId);
+  });
+  volBtn.addEventListener("pointermove", (e) => {
+    if (!volBtn.hasPointerCapture(e.pointerId)) return;
+    const track = volBtn.querySelector(".track");
+    const box = track.getBoundingClientRect();
+    const t = box.width > 0 ? (e.clientX - box.left) / box.width : 0;
+    setTune("volume", VOLUME.min + Math.min(1, Math.max(0, t)) * (VOLUME.max - VOLUME.min));
+    hooks.onVolume(AUDIO_MASTER);
+    paint();
+  });
+  audioBack.addEventListener("pointerdown", () => go("options"));
 
   const howtoBtns = [];
   for (const item of [
@@ -294,6 +340,7 @@ export function bindPause(root, hooks) {
   function pickOption(id) {
     if (id === "hoodie") go("hoodie");
     else if (id === "daynight") go("daynight");
+    else if (id === "audio") go("audio");
     else if (id === "advanced") hooks.onPick("advanced");
   }
 
@@ -328,12 +375,21 @@ export function bindPause(root, hooks) {
 
     const clock = getSkyClock();
     const stamp = formatClock(clock.minutes);
-    if (timeInput.value !== stamp) timeInput.value = stamp;
+    if (document.activeElement !== timeInput && timeInput.value !== stamp) timeInput.value = stamp;
     azBtn.querySelector(".fill").style.width = `${Math.round((clock.azimuth / 360) * 100)}%`;
     azBtn.querySelector("[data-val]").textContent = `${Math.round(clock.azimuth)}°`;
     const clockRows = [timeBtn, azBtn, clockBack];
     clockRows.forEach((btn, i) =>
       btn.classList.toggle("on", open && screen === "daynight" && i === clockIndex),
+    );
+
+    const vol = getTune().volume;
+    const vu = (vol - VOLUME.min) / (VOLUME.max - VOLUME.min);
+    volBtn.querySelector(".fill").style.width = `${Math.round(vu * 100)}%`;
+    volBtn.querySelector("[data-val]").textContent = formatTune(VOLUME, vol);
+    const audioRows = [volBtn, audioBack];
+    audioRows.forEach((btn, i) =>
+      btn.classList.toggle("on", open && screen === "audio" && i === audioIndex),
     );
 
     howtoBtns.forEach((btn, i) =>
@@ -386,7 +442,7 @@ export function bindPause(root, hooks) {
         go("howto");
         return true;
       }
-      if (screen === "hoodie" || screen === "daynight") {
+      if (screen === "hoodie" || screen === "daynight" || screen === "audio") {
         go("options");
         return true;
       }
@@ -406,6 +462,8 @@ export function bindPause(root, hooks) {
         hoodieIndex = (hoodieIndex + dir + n) % n;
       } else if (screen === "daynight") {
         clockIndex = (clockIndex + dir + 3) % 3;
+      } else if (screen === "audio") {
+        audioIndex = (audioIndex + dir + 2) % 2;
       } else if (screen === "howto") {
         howtoIndex = (howtoIndex + dir + howtoBtns.length) % howtoBtns.length;
       } else {
@@ -427,9 +485,17 @@ export function bindPause(root, hooks) {
         else if (row === colorBBtn) pickerB.color.hue = (pickerB.color.hue + dir * 8 + 360) % 360;
         return;
       }
-      if (screen !== "daynight") return;
-      if (clockIndex === 0) setSkyMinutes(getSkyClock().minutes + dir * 15);
-      else if (clockIndex === 1) setSkyAzimuth(getSkyClock().azimuth + dir * 8);
+      if (screen === "daynight") {
+        if (clockIndex === 0) setSkyMinutes(getSkyClock().minutes + dir * 15);
+        else if (clockIndex === 1) setSkyAzimuth(getSkyClock().azimuth + dir * 8);
+        paint();
+        return;
+      }
+      if (screen !== "audio" || audioIndex !== 0) return;
+      const cur = getTune().volume;
+      const span = VOLUME.max - VOLUME.min;
+      setTune("volume", cur + dir * span * 0.08);
+      hooks.onVolume(AUDIO_MASTER);
       paint();
     },
     confirm() {
@@ -441,13 +507,26 @@ export function bindPause(root, hooks) {
         else if (row === patternBtn) cyclePattern(1);
       } else if (screen === "daynight") {
         if (clockIndex === 2) go("options");
+      } else if (screen === "audio") {
+        if (audioIndex === 1) go("options");
+        else {
+          setTune("volume", 1);
+          hooks.onVolume(AUDIO_MASTER);
+          paint();
+        }
       } else if (screen === "howto") {
         if (howtoIndex === 0) go("tricks");
         else go("root");
       } else if (trickIndex === TRICKS.length) go("howto");
     },
-    tick(dt, ly = 0) {
+    tick(dt, ly = 0, lx = 0) {
       if (!open) return;
+      if (screen === "audio" && audioIndex === 0 && lx) {
+        const span = VOLUME.max - VOLUME.min;
+        setTune("volume", getTune().volume + lx * span * 0.45 * dt);
+        hooks.onVolume(AUDIO_MASTER);
+        paint();
+      }
       if (screen === "howto" || screen === "tricks") {
         const pane = screen === "howto" ? howtoBody : trickList;
         pane.scrollTop += ly * MENU_SCROLL * dt;

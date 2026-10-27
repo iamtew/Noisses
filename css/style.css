@@ -321,7 +321,11 @@ body {
   grid-template-columns: 1.6rem 8rem minmax(5rem, 14rem) 4.2rem;
 }
 
-#pause [data-clock-time] input[type="time"] {
+#pause .row[data-audio-volume] {
+  grid-template-columns: 1.6rem 8rem minmax(5rem, 14rem) 4.2rem 2rem;
+}
+
+#pause [data-clock-time] input[data-clock-input] {
   justify-self: start;
   width: 9.5rem;
   padding: 0.2rem 0.35rem;
@@ -383,7 +387,8 @@ body {
   letter-spacing: 0.04em;
 }
 
-#menu .tune-reset {
+#menu .tune-reset,
+#pause .tune-reset {
   display: grid;
   place-items: center;
   width: 1.6rem;
@@ -391,7 +396,8 @@ body {
   color: #c8c4bc;
 }
 
-#menu .tune-reset .ico {
+#menu .tune-reset .ico,
+#pause .tune-reset .ico {
   width: 1.15rem;
   height: 1.15rem;
 }
