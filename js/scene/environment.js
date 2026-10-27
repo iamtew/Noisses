@@ -145,11 +145,11 @@ export function createDust() {
  * Embarcadero Plaza, San Francisco, cropped so it can be skated.
  * +Z is east, toward the bay. +X is north.
  * Facing +Z, +X is on the left, which is north when you face the bay.
- * The brick is one field. The fountain sits at the north end, Sue Bierman
- * Park is past that, Market and Embarcadero Center are west, the Embarcadero
- * and the Ferry Building (clock tower at the south end) are east.
- * The tennis courts on the current map are brick here.
- * Tubes are ours, inside that north footprint, not a trace of the sculpture.
+ * One brick field with a hole for the north basin. Invented tube stack in
+ * that pit. East terrace and a three-tier octagon sit on the brick.
+ * Sue Bierman Park is past the fountain. Market and Embarcadero Center
+ * are west. The Embarcadero and the Ferry Building (clock tower at the
+ * south end) are east.
  */
 export function createEnvironment() {
   const root = new THREE.Group();
@@ -168,10 +168,20 @@ export function createEnvironment() {
   });
   const lawn = new THREE.MeshStandardMaterial({ color: 0x3e6a45, roughness: 0.95 });
   const tubeMat = new THREE.MeshStandardMaterial({
-    color: 0xb7b3aa,
-    roughness: 0.72,
+    color: 0xc4b8a4,
+    roughness: 0.84,
   });
   const stone = new THREE.MeshStandardMaterial({ color: 0xc4b8a4, roughness: 0.8 });
+  const grey = new THREE.MeshStandardMaterial({
+    map: concreteMap(5),
+    color: 0xc5c8cb,
+    roughness: 0.9,
+  });
+  const wallDark = new THREE.MeshStandardMaterial({
+    map: concreteMap(2),
+    color: 0x5f646a,
+    roughness: 0.93,
+  });
   const ferryMat = new THREE.MeshStandardMaterial({ color: 0xd9d3c6, roughness: 0.7 });
   const towerMat = new THREE.MeshStandardMaterial({ color: 0xeee6d6, roughness: 0.55 });
   const glass = new THREE.MeshStandardMaterial({
@@ -222,6 +232,15 @@ export function createEnvironment() {
     return put(mesh, { floor: true });
   }
 
+  // Four overlapping slabs around a rect hole. Overlap so a seam cannot drop you.
+  function ringHole(fx0, fx1, fz0, fz1, hx0, hx1, hz0, hz1, h, top, mat, flags) {
+    const ov = 0.15;
+    slab(fx1 - fx0, h, hz0 + ov - fz0, (fx0 + fx1) / 2, top, (fz0 + hz0 + ov) / 2, mat, flags);
+    slab(fx1 - fx0, h, fz1 - (hz1 - ov), (fx0 + fx1) / 2, top, (hz1 - ov + fz1) / 2, mat, flags);
+    slab(hx0 + ov - fx0, h, hz1 - hz0, (fx0 + hx0 + ov) / 2, top, (hz0 + hz1) / 2, mat, flags);
+    slab(fx1 - (hx1 - ov), h, hz1 - hz0, (hx1 - ov + fx1) / 2, top, (hz0 + hz1) / 2, mat, flags);
+  }
+
   // Round bar on two posts. Grind line is the top of the bar.
   function rail(x, y, z, len, alongX) {
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, len, 12), metal);
@@ -262,47 +281,105 @@ export function createEnvironment() {
     metalness: 0.72,
   });
 
-  // Streets, sidewalk, and promenade. Brick and lawn sit on this, overlapping.
-  slab(170, 0.6, 200, 0, 0, 20, street, { floor: true });
+  const fx = 28;
+  const fz = 4;
+  const hx0 = 19;
+  const hx1 = 37;
+  const hz0 = -4;
+  const hz1 = 12;
+  const brickTop = 0.04;
+  const basinTop = -1.16;
+  const curbH = 0.34;
+  const curbTop = brickTop + curbH;
+  const ts = 2.6;
 
-  // One brick field. Spawn is on it, nose toward the bay.
-  slab(78, 0.3, 56, 6, 0.04, 6, brick, { floor: true });
+  // Street and brick leave a hole for the basin. Overlaps hide the joints.
+  ringHole(-85, 85, -80, 120, hx0, hx1, hz0, hz1, 0.6, 0, street, { floor: true });
+  ringHole(-33, 45, -22, 34, hx0, hx1, hz0, hz1, 0.3, brickTop, brick, { floor: true });
 
   // Sue Bierman Park, north of the brick. Overlaps the plaza edge.
   slab(40, 0.2, 52, 62, 0.05, 2, lawn, { floor: true });
 
-  // Fountain plinth, north end of the brick. A ledge, not a pit.
-  const plinth = slab(18, 0.42, 14, 28, 0.46, 4, tubeMat, { floor: true, solid: true });
-  // Square tubes in that footprint. Leans are original, not measured off the artwork.
+  // Basin floor and walls. Walls reach curb height so plaza board height cannot ghost in.
+  slab(hx1 - hx0, 0.22, hz1 - hz0, fx, basinTop, fz, grey, { floor: true });
+  const wallH = curbTop - (basinTop - 0.22);
+  const wallTop = curbTop;
+  slab(0.5, wallH, hz1 - hz0, hx0, wallTop, fz, grey, { solid: true });
+  slab(0.5, wallH, hz1 - hz0, hx1, wallTop, fz, grey, { solid: true });
+  slab(hx1 - hx0, wallH, 0.5, fx, wallTop, hz0, grey, { solid: true });
+  slab(hx1 - hx0, wallH, 0.5, fx, wallTop, hz1, grey, { solid: true });
+  const cw = 0.7;
+  slab(cw, curbH, hz1 - hz0 + cw, hx0 - cw / 2, curbTop, fz, grey, { floor: true });
+  slab(cw, curbH, hz1 - hz0 + cw, hx1 + cw / 2, curbTop, fz, grey, { floor: true });
+  slab(hx1 - hx0 + cw, curbH, cw, fx, curbTop, hz0 - cw / 2, grey, { floor: true });
+  slab(hx1 - hx0 + cw, curbH, cw, fx, curbTop, hz1 + cw / 2, grey, { floor: true });
+
+  // Square tubes in that pit. Leans are invented, not measured off the artwork.
   const tubes = [
-    [32, 2, 9, 0.12],
-    [28, 6, 12, -0.1],
-    [24, 1, 8, 0.16],
-    [26, 9, 7, -0.08],
-    [30, 8, 10, 0.05],
-    [22, 5, 6, 0.14],
+    [22.2, 3.5, ts, 9.5, ts, basinTop, 0.38, 0.62, 0.48],
+    [33.8, 4.8, ts, 8.8, ts, basinTop, -0.28, -0.72, -0.52],
+    [26.5, -0.5, ts, 10.2, ts, basinTop, 0.12, 0.95, -0.58],
+    [29.5, 9.5, ts, 7.8, ts, basinTop, -0.42, -0.38, 0.22],
+    [28.0, 4.2, 10.5, ts, ts, basinTop + 6.8, 0.24, 0.68, -0.18],
+    [27.5, 5.5, ts, ts, 8.5, basinTop + 5.6, 0.48, -0.58, 0.22],
+    [32.2, 1.2, ts, 4.2, ts, basinTop, 0.55, 0.42, -0.38],
   ];
-  for (const [x, z, h, lean] of tubes) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.8, h, 1.8), tubeMat);
-    mesh.position.set(x, 0.46 + h / 2, z);
-    mesh.rotation.z = lean;
+  for (const [x, z, w, h, d, y0, rx, ry, rz] of tubes) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), tubeMat);
+    mesh.position.set(x, y0 + h / 2, z);
+    mesh.rotation.set(rx, ry, rz);
     put(mesh, { solid: true });
   }
 
-  // Round stage on the east half of the brick, from the aerial.
-  const stage = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 0.12, 28), stone);
-  stage.position.set(-4, 0.1, 18);
-  put(stage, { floor: true });
+  // Three-tier octagon on open brick. Floor only: a solid AABB would shove you off.
+  const ox = 2;
+  const oz = 12;
+  const octH = [0.18, 0.36, 0.54];
+  const octR = [4.2, 3.2, 2.2];
+  for (let i = 0; i < 3; i++) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(octR[i], octR[i], octH[i], 8), grey);
+    m.position.set(ox, brickTop + octH[i] / 2, oz);
+    m.rotation.y = Math.PI / 8;
+    put(m, { floor: true });
+  }
 
-  // Skate obstacles on open brick. Spawn at 0,0 stays clear.
-  // Ledge on the right, long toward the bay. Both lips grind.
-  slab(0.8, 0.46, 7, -14, 0.5, 3, stone, { floor: true, solid: true });
+  // East terrace toward the palms. Spawn at 0,0 stays clear.
+  const padW = 36;
+  const padD = 5.2;
+  const padH = 0.55;
+  const padX = 2;
+  const padZ = 23.8;
+  const padTop = brickTop + padH;
+  const padFront = padZ - padD / 2;
+  const padBack = padZ + padD / 2;
+  const padSouth = padX - padW / 2;
+  const padNorth = padX + padW / 2;
+  slab(padW, padH, padD, padX, padTop, padZ, grey, { floor: true });
+  const tread = 0.48;
+  const rise = padH / 3;
+  const endW = padD - 0.2;
+  for (let i = 0; i < 3; i++) {
+    const h = (i + 1) * rise;
+    slab(padW, h, tread, padX, brickTop + h, padFront - (2.5 - i) * tread, grey, { floor: true });
+    slab(tread, h, endW, padSouth - (2.5 - i) * tread, brickTop + h, padZ, grey, { floor: true });
+    slab(tread, h, endW, padNorth + (2.5 - i) * tread, brickTop + h, padZ, grey, { floor: true });
+  }
+  function wallSeg(w, h, d, x, top, z, ry) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallDark);
+    mesh.position.set(x, top - h / 2, z);
+    mesh.rotation.y = ry;
+    put(mesh, { solid: true });
+  }
+  wallSeg(13, 1.32, 0.5, -9, 1.36, padBack + 0.2, 0.12);
+  wallSeg(14, 1.32, 0.5, 2, 1.36, padBack + 0.55, 0);
+  wallSeg(13, 1.32, 0.5, 13, 1.36, padBack + 0.2, -0.12);
+
   // Lower box ahead-left. Ride it or grind the long sides.
-  slab(1.5, 0.32, 4, 9, 0.36, 6, stone, { floor: true, solid: true });
+  slab(1.5, 0.32, 4, 10, 0.36, 4, grey, { floor: true, solid: true });
   // Kicker on the right, launches toward the bay.
   kicker(2.2, 0.62, 2.6, -22, 10);
-  const railBay = rail(12, 0.48, 20, 6, false);
-  const railSide = rail(-18, 0.6, 22, 5, true);
+  const railBay = rail(16, 0.48, 32, 5, false);
+  const railSide = rail(-26, 0.6, 6, 5, true);
 
   // Palms along the east sidewalk, between the brick and the Embarcadero.
   for (let x = -28; x <= 40; x += 8) {
@@ -353,18 +430,36 @@ export function createEnvironment() {
   root.updateMatrixWorld(true);
   const solids = solidMeshes.map((m) => new THREE.Box3().setFromObject(m));
 
-  // South lip of the fountain plinth. Ride east-west along it.
-  const plinthEdge = grindSpec(
-    new THREE.Vector3(plinth.position.x - 9, 0.46, plinth.position.z),
-    new THREE.Vector3(0, 0, 1),
-    6,
-    0.08,
-  );
+  const curbLenZ = (hz1 - hz0) / 2 - 0.2;
+  const curbLenX = (hx1 - hx0) / 2 - 0.2;
+  const basinLips = [
+    grindSpec(new THREE.Vector3(hx0 - cw, curbTop, fz), new THREE.Vector3(0, 0, 1), curbLenZ, 0.08),
+    grindSpec(new THREE.Vector3(hx1 + cw, curbTop, fz), new THREE.Vector3(0, 0, 1), curbLenZ, 0.08),
+    grindSpec(new THREE.Vector3(fx, curbTop, hz0 - cw), new THREE.Vector3(1, 0, 0), curbLenX, 0.08),
+    grindSpec(new THREE.Vector3(fx, curbTop, hz1 + cw), new THREE.Vector3(1, 0, 0), curbLenX, 0.08),
+  ];
+  const topNose = padFront - tread;
+  const octA0 = octR[0] * Math.cos(Math.PI / 8);
+  const octF0 = octR[0] * Math.sin(Math.PI / 8);
+  const octA2 = octR[2] * Math.cos(Math.PI / 8);
+  const octF2 = octR[2] * Math.sin(Math.PI / 8);
+  const octY0 = brickTop + octH[0];
+  const octY2 = brickTop + octH[2];
   const ledgeLips = [
-    grindSpec(new THREE.Vector3(-14.4, 0.5, 3), new THREE.Vector3(0, 0, 1), 3.3, 0.06),
-    grindSpec(new THREE.Vector3(-13.6, 0.5, 3), new THREE.Vector3(0, 0, 1), 3.3, 0.06),
-    grindSpec(new THREE.Vector3(8.25, 0.36, 6), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
-    grindSpec(new THREE.Vector3(9.75, 0.36, 6), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
+    grindSpec(new THREE.Vector3(padX, padTop, topNose), new THREE.Vector3(1, 0, 0), padW / 2 - 0.4, 0.07),
+    grindSpec(new THREE.Vector3(padX, padTop, padBack), new THREE.Vector3(1, 0, 0), padW / 2 - 0.4, 0.07),
+    grindSpec(new THREE.Vector3(padSouth, padTop, padZ), new THREE.Vector3(0, 0, 1), padD / 2 - 0.2, 0.07),
+    grindSpec(new THREE.Vector3(padNorth, padTop, padZ), new THREE.Vector3(0, 0, 1), padD / 2 - 0.2, 0.07),
+    grindSpec(new THREE.Vector3(ox, octY0, oz - octA0), new THREE.Vector3(1, 0, 0), octF0, 0.07),
+    grindSpec(new THREE.Vector3(ox, octY0, oz + octA0), new THREE.Vector3(1, 0, 0), octF0, 0.07),
+    grindSpec(new THREE.Vector3(ox - octA0, octY0, oz), new THREE.Vector3(0, 0, 1), octF0, 0.07),
+    grindSpec(new THREE.Vector3(ox + octA0, octY0, oz), new THREE.Vector3(0, 0, 1), octF0, 0.07),
+    grindSpec(new THREE.Vector3(ox, octY2, oz - octA2), new THREE.Vector3(1, 0, 0), octF2, 0.07),
+    grindSpec(new THREE.Vector3(ox, octY2, oz + octA2), new THREE.Vector3(1, 0, 0), octF2, 0.07),
+    grindSpec(new THREE.Vector3(ox - octA2, octY2, oz), new THREE.Vector3(0, 0, 1), octF2, 0.07),
+    grindSpec(new THREE.Vector3(ox + octA2, octY2, oz), new THREE.Vector3(0, 0, 1), octF2, 0.07),
+    grindSpec(new THREE.Vector3(9.25, 0.36, 4), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
+    grindSpec(new THREE.Vector3(10.75, 0.36, 4), new THREE.Vector3(0, 0, 1), 1.85, 0.06),
   ];
 
   floors.push(ground);
@@ -374,6 +469,6 @@ export function createEnvironment() {
     props: [root],
     floors,
     solids,
-    grinds: [plinthEdge, ...ledgeLips, railBay, railSide],
+    grinds: [...basinLips, ...ledgeLips, railBay, railSide],
   };
 }
