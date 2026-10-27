@@ -18,7 +18,7 @@ PlayStation face buttons. On the board, left stick is the front foot and right s
 
 - **Pause → Options → Stance** — Regular or Switch. Same toggle as ○ on the ground. Persists. Regular: left foot on the nose. Switch: right foot on the nose. No Goofy.
 - **○ Circle** — on the ground, Regular ↔ Switch (nollie if you are already rolling backwards). Rolling tail-first is fakie (front foot pops). Still bails if you mash it on a grind.
-- **Ollie** — hold back foot down, flick front foot up. **Kickflip** — hold back down, flick front right. **Heelflip** — hold back down, flick front left. Nollie is that with the front foot first.
+- **Ollie** — hold back foot down, flick front foot up. **Kickflip** — hold back down, flick front left. **Heelflip** — hold back down, flick front right. Nollie is that with the front foot first.
 - **△ Triangle** — get off the board, or get back on. The deck sits in the left hand, graphic out, gripped at the truck. Left stick walks, right stick swings the camera, × jumps, a second × runs until the stick recenters.
 - **L3 + R3** — stick debug, both clicks together.
 - **← / →** — on the board, backside / frontside follow cam. Cam offset lives in advanced; 50% is dead-center, stock is 35% backside.

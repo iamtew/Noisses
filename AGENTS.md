@@ -23,7 +23,7 @@ There is no Goofy. Stance is Regular or Switch. Pause → Options Stance and ○
 
 Fakie is rolling tail-first. Nollie is switch + fakie.
 
-Regular ollie: right pad down, left pad up. Kickflip: same hold, left pad right. Heelflip: left pad left. Nollie ollie: left pad down, right pad up.
+Regular ollie: right pad down, left pad up. Kickflip: same hold, left pad left. Heelflip: left pad right. Nollie ollie: left pad down, right pad up.
 
 ## Keys
 

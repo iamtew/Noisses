@@ -9,7 +9,7 @@ export const HOWTO_BODY =
   "□ push left foot. × push right foot. Once per press, on the ground.\n" +
   "Stick Y is weight. Down on a stick is toward the tail. Up is toward the nose.\n" +
   "L2 / R2 turn. R1 low cam. ← backside · → frontside cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
-  "Ollie: hold the back stick down, flick the front stick up. Kickflip: hold back down, flick front right. Heelflip is front left. Nollie is that, front foot first. Catch is automatic near a full turn.\n" +
+  "Ollie: hold the back stick down, flick the front stick up. Kickflip: hold back down, flick front left. Heelflip is front right. Nollie is that, front foot first. Catch is automatic near a full turn.\n" +
   "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders.\n" +
   "Pause → Options is hoodie, day/night, audio, Regular/Switch, and those sliders. Time scale lives in advanced.\n" +
   "△ steps off the board. It lives in the left hand, graphic out, truck in the fist. △ again gets back on.\n" +
@@ -177,7 +177,7 @@ export function selfCheckHowto() {
   const mid = sampleTrick(list[0].keys, 0.5);
   if (!(mid.ry > 0.4)) throw new Error("howto self-check: ollie tail");
   const kick = list.find((r) => r.name === "Kickflip");
-  if (!kick || !kick.arrows.includes("→")) throw new Error("howto self-check: kickflip front right");
+  if (!kick || !kick.arrows.includes("←")) throw new Error("howto self-check: kickflip front left");
   const nollie = listTricks("nollie", "flips");
   const nollieOllie = sampleTrick(nollie[0].keys, 0.5);
   if (!(nollieOllie.ly < -0.4)) throw new Error("howto self-check: nollie charges left pad at 12 o'clock");

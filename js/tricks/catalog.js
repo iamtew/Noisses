@@ -91,26 +91,26 @@ function remapRow(row, ride, aMap, bMap) {
 
 const NORMAL_FLIPS = [
   flipRow("ollie", "normal", "high", "S", "N"),
-  flipRow("kickflip", "normal", "high", "S", "E", { flip: -1 }),
-  flipRow("heelflip", "normal", "high", "S", "W", { flip: 1 }),
+  flipRow("kickflip", "normal", "high", "S", "W", { flip: -1 }),
+  flipRow("heelflip", "normal", "high", "S", "E", { flip: 1 }),
   flipRow("BS pop shove-it", "normal", "high", "S", "S", { aFlick: true, bFlick: false, shuv: 1 }),
   flipRow("FS pop shove-it", "normal", "high", "S", "N", { aFlick: true, bFlick: false, shuv: -1 }),
   // ponytail: mid/low ① diagonals guessed from a mushy screenshot. Correct a cell, not the matcher.
-  flipRow("varial flip", "normal", "mid", "SE", "E", { flip: -1, shuv: 1 }),
-  flipRow("varial heel", "normal", "mid", "SW", "W", { flip: 1, shuv: 1 }),
-  flipRow("hardflip", "normal", "mid", "NW", "W", { flip: -1, shuv: -1 }),
-  flipRow("inward heel", "normal", "mid", "NE", "E", { flip: 1, shuv: 1 }),
-  flipRow("hardflip 360", "normal", "mid", "W", "NW", { flip: -1, shuv: -1, shuvTurns: 2 }),
+  flipRow("varial flip", "normal", "mid", "SW", "W", { flip: -1, shuv: 1 }),
+  flipRow("varial heel", "normal", "mid", "SE", "E", { flip: 1, shuv: 1 }),
+  flipRow("hardflip", "normal", "mid", "NE", "E", { flip: -1, shuv: -1 }),
+  flipRow("inward heel", "normal", "mid", "NW", "W", { flip: 1, shuv: 1 }),
+  flipRow("hardflip 360", "normal", "mid", "E", "NE", { flip: -1, shuv: -1, shuvTurns: 2 }),
   flipRow("FS pop shuvit 360", "normal", "mid", "N", "N", {
     aFlick: true,
     bFlick: false,
     shuv: -1,
     shuvTurns: 2,
   }),
-  flipRow("BS pop shove-it 360", "normal", "low", "SE", "S", { aFlick: true, bFlick: false, shuv: 1, shuvTurns: 2 }),
-  flipRow("360 flip", "normal", "low", "E", "E", { flip: -1, shuv: 1, shuvTurns: 2 }),
-  flipRow("laserflip", "normal", "low", "W", "SW", { flip: 1, shuv: -1, shuvTurns: 2 }),
-  flipRow("inward 360", "normal", "low", "NE", "NE", { flip: 1, shuv: 1, shuvTurns: 2 }),
+  flipRow("BS pop shove-it 360", "normal", "low", "SW", "S", { aFlick: true, bFlick: false, shuv: 1, shuvTurns: 2 }),
+  flipRow("360 flip", "normal", "low", "W", "W", { flip: -1, shuv: 1, shuvTurns: 2 }),
+  flipRow("laserflip", "normal", "low", "E", "SE", { flip: 1, shuv: -1, shuvTurns: 2 }),
+  flipRow("inward 360", "normal", "low", "NW", "NW", { flip: 1, shuv: 1, shuvTurns: 2 }),
   flipRow("low pop ollie", "normal", "low", "S", "S", { bFlick: false }),
 ];
 
@@ -118,8 +118,8 @@ const FAKIE_FLIPS = NORMAL_FLIPS.map((r) => remapRow(r, "fakie", Y_FLIP, Y_FLIP)
 
 const SWITCH_FLIPS = [
   flipRow("ollie", "switch", "high", "S", "S"),
-  flipRow("kickflip", "switch", "high", "S", "W", { flip: 1 }),
-  flipRow("heelflip", "switch", "high", "S", "E", { flip: -1 }),
+  flipRow("kickflip", "switch", "high", "S", "E", { flip: 1 }),
+  flipRow("heelflip", "switch", "high", "S", "W", { flip: -1 }),
   flipRow("BS pop shove-it", "switch", "high", "S", "S", { aFlick: true, bFlick: false, shuv: 1 }),
   flipRow("FS pop shove-it", "switch", "high", "S", "N", { aFlick: true, bFlick: false, shuv: -1 }),
   ...NORMAL_FLIPS.filter((r) => r.pop !== "high").map((r) => remapRow(r, "switch", {}, XY_FLIP)),
@@ -299,15 +299,15 @@ export function selfCheckCatalog() {
 
   const ollie = matchFlip("normal", "S", "N", false, true);
   if (!ollie || ollie.name !== "ollie") throw new Error("catalog normal ollie");
-  const kick = matchFlip("normal", "S", "E", false, true);
+  const kick = matchFlip("normal", "S", "W", false, true);
   if (!kick || kick.name !== "kickflip") throw new Error("catalog kickflip");
-  const heel = matchFlip("normal", "S", "W", false, true);
+  const heel = matchFlip("normal", "S", "E", false, true);
   if (!heel || heel.name !== "heelflip") throw new Error("catalog heelflip");
   const fakie = matchFlip("fakie", "N", "S", false, true);
   if (!fakie || fakie.name !== "ollie" || trickLabel(fakie) !== "fakie ollie") {
     throw new Error("catalog fakie ollie");
   }
-  const nollie = matchFlip("nollie", "N", "E", false, true);
+  const nollie = matchFlip("nollie", "N", "W", false, true);
   if (!nollie || nollie.name !== "kickflip" || trickLabel(nollie) !== "nollie kickflip") {
     throw new Error("catalog nollie kickflip");
   }
@@ -324,7 +324,7 @@ export function selfCheckCatalog() {
   feet.fakie = true;
   syncFeet(feet);
   if (!feet.regular || feet.ride !== "nollie") throw new Error("catalog nollie feet");
-  const swKick = matchFlip("switch", "S", "W", false, true);
+  const swKick = matchFlip("switch", "S", "E", false, true);
   if (!swKick || swKick.name !== "kickflip") throw new Error("catalog switch kickflip");
 
   const fifty = matchGrind("N", "S", "fs", 0.9);

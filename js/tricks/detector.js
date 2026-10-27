@@ -59,7 +59,7 @@ function applyPopRow(board, row, input) {
 
 /**
  * Regular/switch: hold back, add front. Nollie/fakie: hold front, add back.
- * Kickflip is charge down + flick right. Latch until the flick foot recenters.
+ * Kickflip is charge down + flick left. Latch until the flick foot recenters.
  */
 export function detectPop(input, board, dt = FIXED_DT) {
   rememberFlick(board, input, dt);
@@ -148,16 +148,22 @@ export function selfCheckPop() {
   const kick = detectPop(
     {
       back: { x: 0, y: 0.8 },
-      front: { x: 0.85, y: 0 },
+      front: { x: -0.85, y: 0 },
       frontYVel: 0,
       backYVel: 0,
-      frontXVel: 12,
+      frontXVel: -12,
       backXVel: 0,
     },
     board,
   );
   if (!(kick > 0) || board.trick !== "kickflip") {
-    throw new Error("pop self-check: kickflip is back down + front right");
+    throw new Error("pop self-check: kickflip is back down + front left");
+  }
+  const kickHold = { front: { x: -0.85, y: 0 }, back: { x: 0, y: 0.8 } };
+  stepFlip(kickHold, board, FIXED_DT, false);
+  stepFlip(kickHold, board, FIXED_DT, false);
+  if (board.trick !== "kickflip" || !board.trickRow) {
+    throw new Error("pop self-check: grounded frames after pop must keep kickflip");
   }
 
   board.popLatch = false;
@@ -167,7 +173,7 @@ export function selfCheckPop() {
   const slow = detectPop(
     {
       back: { x: 0, y: 0.8 },
-      front: { x: 0.85, y: 0 },
+      front: { x: -0.85, y: 0 },
       frontYVel: 0,
       backYVel: 0,
       frontXVel: 0,
@@ -176,26 +182,26 @@ export function selfCheckPop() {
     board,
   );
   if (!(slow > 0) || board.trick !== "kickflip") {
-    throw new Error("pop self-check: slow analog right add must kickflip");
+    throw new Error("pop self-check: slow analog left add must kickflip");
   }
 
   board.popLatch = false;
   board.prevFlickDir = "idle";
   board.flickFront = 0;
   board.flickFrontX = 0;
-  const upRight = detectPop(
+  const upLeft = detectPop(
     {
       back: { x: 0, y: 0.8 },
-      front: { x: 0.55, y: -0.7 },
+      front: { x: -0.55, y: -0.7 },
       frontYVel: -10,
       backYVel: 0,
-      frontXVel: 8,
+      frontXVel: -8,
       backXVel: 0,
     },
     board,
   );
-  if (!(upRight > 0) || board.trick !== "kickflip") {
-    throw new Error("pop self-check: up-right flick must kickflip, not ollie");
+  if (!(upLeft > 0) || board.trick !== "kickflip") {
+    throw new Error("pop self-check: up-left flick must kickflip, not ollie");
   }
 
   board.popLatch = false;
@@ -205,16 +211,16 @@ export function selfCheckPop() {
   const heel = detectPop(
     {
       back: { x: 0, y: 0.8 },
-      front: { x: -0.85, y: 0 },
+      front: { x: 0.85, y: 0 },
       frontYVel: 0,
       backYVel: 0,
-      frontXVel: -12,
+      frontXVel: 12,
       backXVel: 0,
     },
     board,
   );
   if (!(heel > 0) || board.trick !== "heelflip") {
-    throw new Error("pop self-check: heelflip is back down + front left");
+    throw new Error("pop self-check: heelflip is back down + front right");
   }
 
   board.popLatch = false;
@@ -236,16 +242,16 @@ export function selfCheckPop() {
   detectPop(
     {
       back: { x: 0, y: 0.8 },
-      front: { x: 0.7, y: -0.2 },
+      front: { x: -0.7, y: -0.2 },
       frontYVel: 0,
       backYVel: 0,
-      frontXVel: 6,
+      frontXVel: -6,
       backXVel: 0,
     },
     board,
   );
   if (board.trick !== "kickflip") {
-    throw new Error("pop self-check: grounded scoop-right must upgrade ollie");
+    throw new Error("pop self-check: grounded scoop-left must upgrade ollie");
   }
 
   board.popLatch = false;
@@ -257,17 +263,17 @@ export function selfCheckPop() {
   board.ride = "nollie";
   const nollieKick = detectPop(
     {
-      back: { x: 0.85, y: 0 },
+      back: { x: -0.85, y: 0 },
       front: { x: 0, y: -0.8 },
       frontYVel: 0,
       backYVel: 0,
       frontXVel: 0,
-      backXVel: 12,
+      backXVel: -12,
     },
     board,
   );
   if (!(nollieKick > 0) || board.trick !== "nollie kickflip") {
-    throw new Error("pop self-check: nollie kickflip is front 12 o'clock + back right");
+    throw new Error("pop self-check: nollie kickflip is front 12 o'clock + back left");
   }
 }
 
@@ -308,6 +314,8 @@ function scoopUpgrade(input, board) {
 export function stepFlip(input, board, dt, airborne) {
   if (!airborne) {
     board.airTime = 0;
+    // Wheels stay grounded a couple frames after pop. Do not wipe the pending flip.
+    if (board.trickRow && !board.spinApplied) return;
     board.spinApplied = false;
     if (board.caught || (Math.abs(board.flip) < 0.05 && Math.abs(board.shuv) < 0.05)) {
       board.flip = 0;
@@ -452,7 +460,7 @@ export function selfCheckFlip() {
     shuvRate: 0,
     caught: true,
     trick: "kickflip",
-    trickRow: matchFlip("normal", "S", "E", false, true),
+    trickRow: matchFlip("normal", "S", "W", false, true),
     spinApplied: false,
     flickFrontX: FLICK_WINDOW,
     flickBackX: 0,
