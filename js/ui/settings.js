@@ -1,10 +1,12 @@
 import {
   AUDIO_MASTER,
   TUNABLES,
+  formatTune,
   getTune,
   resetTune,
   setTune,
 } from "../constants.js";
+import { iconHtml } from "./icons.js";
 
 /** Options menu. D-pad or the left stick. Values are percent of the stock feel. */
 export function bindSettings(root, onChange) {
@@ -16,7 +18,7 @@ export function bindSettings(root, onChange) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "row";
-    btn.innerHTML = `<span class="name"></span><span class="track"><span class="fill"></span></span><span class="val"></span>`;
+    btn.innerHTML = `<span class="name"></span><span class="track"><span class="fill"></span></span><span class="val"></span><span class="tune-reset">${iconHtml("restore")}</span>`;
     btn.querySelector(".name").textContent = spec.label;
     const drag = (e) => {
       index = TUNABLES.indexOf(spec);
@@ -24,6 +26,13 @@ export function bindSettings(root, onChange) {
       paint();
     };
     btn.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".tune-reset")) {
+        index = TUNABLES.indexOf(spec);
+        setTune(spec.id, 1);
+        onChange(AUDIO_MASTER);
+        paint();
+        return;
+      }
       btn.setPointerCapture(e.pointerId);
       drag(e);
     });
@@ -38,7 +47,7 @@ export function bindSettings(root, onChange) {
   const resetBtn = document.createElement("button");
   resetBtn.type = "button";
   resetBtn.className = "row reset";
-  resetBtn.textContent = "Reset";
+  resetBtn.innerHTML = `${iconHtml("restore")}<span>Reset</span>`;
   resetBtn.addEventListener("pointerdown", () => {
     index = TUNABLES.length;
     resetTune();
@@ -62,7 +71,7 @@ export function bindSettings(root, onChange) {
       const u = (values[spec.id] - spec.min) / (spec.max - spec.min);
       btn.classList.toggle("on", open && i === index);
       btn.querySelector(".fill").style.width = `${Math.round(u * 100)}%`;
-      btn.querySelector(".val").textContent = `${Math.round(values[spec.id] * 100)}%`;
+      btn.querySelector(".val").textContent = formatTune(spec, values[spec.id]);
     });
     resetBtn.classList.toggle("on", open && index === TUNABLES.length);
   }
@@ -99,8 +108,13 @@ export function bindSettings(root, onChange) {
       paint();
     },
     confirm() {
-      if (index !== TUNABLES.length) return;
-      resetTune();
+      if (index >= TUNABLES.length) {
+        resetTune();
+        onChange(AUDIO_MASTER);
+        paint();
+        return;
+      }
+      setTune(TUNABLES[index].id, 1);
       onChange(AUDIO_MASTER);
       paint();
     },

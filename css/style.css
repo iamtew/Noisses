@@ -304,6 +304,10 @@ body {
   cursor: pointer;
 }
 
+#menu .row {
+  grid-template-columns: 11rem 1fr 5.6rem 2rem;
+}
+
 #pause .row {
   font-size: 1.45rem;
   padding: 0.85rem 0.8rem;
@@ -377,6 +381,19 @@ body {
   font-size: 1rem;
   text-align: right;
   letter-spacing: 0.04em;
+}
+
+#menu .tune-reset {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  color: #c8c4bc;
+}
+
+#menu .tune-reset .ico {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 #menu > p,

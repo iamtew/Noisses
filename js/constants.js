@@ -265,6 +265,8 @@ export let DUMPTRUCK = 0.8;
 
 /** Stock values. Sliders store a multiplier of these. 1 = as shipped. */
 const TUNE_BASE = {
+  gravity: 9.81,
+  timeScale: 60,
   pop: 165,
   flip: 22.5,
   shuv: 13.75,
@@ -274,13 +276,14 @@ const TUNE_BASE = {
   turn: 1.8,
   volume: 0.38,
   dumptruck: 0.8,
-  gravity: 9.81,
 };
 
 export const TUNABLES = [
-  { id: "pop", label: "Pop height", min: 0.55, max: 1.75 },
   // 20% is a lazy hang. 220% is a short hop. 100% is the stock drop.
   { id: "gravity", label: "Gravity", min: 0.2, max: 2.2 },
+  // 1/60 = real time. 1 = 1h in 1m. 12 = 1h in 5s.
+  { id: "timeScale", label: "Time scale", min: 1 / 60, max: 12 },
+  { id: "pop", label: "Pop height", min: 0.55, max: 1.75 },
   { id: "flip", label: "Flip speed", min: 0.45, max: 1.8 },
   { id: "shuv", label: "Shuv speed", min: 0.45, max: 1.8 },
   { id: "grind", label: "Grind friction", min: 0.15, max: 3 },
@@ -310,6 +313,7 @@ function publishTune() {
   AUDIO_MASTER = TUNE_BASE.volume * tune.volume;
   DUMPTRUCK = TUNE_BASE.dumptruck * tune.dumptruck;
   GRAVITY = TUNE_BASE.gravity * tune.gravity;
+  TIME_SCALE = TUNE_BASE.timeScale * tune.timeScale;
 }
 
 export function getTune() {
@@ -434,6 +438,28 @@ export function parseClock(value) {
   return h * 60 + min;
 }
 
+/** Real seconds that one game hour lasts at this multiplier. */
+export function realSecPerGameHour(mult) {
+  return 3600 / (TUNE_BASE.timeScale * mult);
+}
+
+export function formatTimeScale(mult) {
+  const sec = realSecPerGameHour(mult);
+  if (sec >= 3590) return "1h = 1h";
+  if (sec >= 59.5) {
+    const mins = sec / 60;
+    if (Math.abs(mins - 1) < 0.02) return "1h = 1m";
+    return `1h = ${Math.round(mins)}m`;
+  }
+  if (Math.abs(sec - 5) < 0.2) return "1h = 5s";
+  return `1h = ${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`;
+}
+
+export function formatTune(spec, value) {
+  if (spec.id === "timeScale") return formatTimeScale(value);
+  return `${Math.round(value * 100)}%`;
+}
+
 export function selfCheckTune() {
   const snap = getTune();
   setTune("pop", 9, false);
@@ -445,6 +471,12 @@ export function selfCheckTune() {
   setTune("gravity", 99, false);
   if (tune.gravity !== 2.2) throw new Error("tune gravity");
   if (Math.abs(GRAVITY - TUNE_BASE.gravity * 2.2) > 0.01) throw new Error("tune gravity publish");
+  setTune("timeScale", 99, false);
+  if (tune.timeScale !== 12) throw new Error("tune timeScale");
+  if (Math.abs(TIME_SCALE - 720) > 0.01) throw new Error("tune timeScale publish");
+  if (formatTimeScale(1) !== "1h = 1m") throw new Error("tune timeScale label");
+  if (formatTimeScale(1 / 60) !== "1h = 1h") throw new Error("tune timeScale realtime");
+  if (formatTimeScale(12) !== "1h = 5s") throw new Error("tune timeScale max");
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
 }
 
