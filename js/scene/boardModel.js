@@ -1,5 +1,11 @@
 import * as THREE from "three";
 import { FOOT_X, FOOT_Z, WHEEL_LOCAL, WHEEL_RADIUS } from "../constants.js";
+import { STICK_LEFT, STICK_RIGHT } from "../ui/sticks.js";
+
+const SHOE = 0xf4f1ea;
+const GUM = 0xd4893a;
+const TOE = -0.028;
+const IN = 0.01;
 
 function gritMap() {
   const s = 64;
@@ -142,34 +148,73 @@ export function createBoardModel() {
     wheels.push(wheel);
   }
 
-  const shoe = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.55 });
-  const sole = new THREE.MeshStandardMaterial({ color: 0xd4893a, roughness: 0.6 });
-  const shoeGeo = new THREE.CapsuleGeometry(0.026, 0.08, 4, 12);
-  const soleGeo = new THREE.CapsuleGeometry(0.028, 0.09, 3, 12);
+  // Shin lands at 0.026. Shoes a bit fatter so they don't read as blades.
+  const shoeGeo = new THREE.CapsuleGeometry(0.032, 0.08, 4, 12);
+  const soleGeo = new THREE.CapsuleGeometry(0.036, 0.09, 3, 12);
   const frontFoot = new THREE.Group();
   const backFoot = new THREE.Group();
+  const shoes = [];
+  const soles = [];
   for (const foot of [frontFoot, backFoot]) {
+    const shoe = new THREE.MeshStandardMaterial({ color: SHOE, roughness: 0.55 });
+    const sole = new THREE.MeshStandardMaterial({ color: GUM, roughness: 0.6 });
     const upper = new THREE.Mesh(shoeGeo, shoe);
-    upper.rotation.x = Math.PI / 2;
-    upper.position.y = 0.032;
-    upper.scale.set(1.15, 1, 0.62);
+    upper.rotation.z = Math.PI / 2;
+    upper.position.set(TOE, 0.032, 0);
+    upper.scale.set(1.15, 1, 1.15);
     upper.castShadow = true;
     const gum = new THREE.Mesh(soleGeo, sole);
-    gum.rotation.x = Math.PI / 2;
-    gum.position.y = 0.012;
-    gum.scale.set(1.2, 1, 0.4);
+    gum.rotation.z = Math.PI / 2;
+    gum.position.set(TOE, 0.012, 0);
+    gum.scale.set(1.2, 1, 1.2);
     gum.castShadow = true;
     foot.add(upper, gum);
+    shoes.push(shoe);
+    soles.push(sole);
   }
   frontFoot.castShadow = true;
   backFoot.castShadow = true;
   group.add(frontFoot, backFoot);
 
-  return { group, wheels, frontFoot, backFoot };
+  return { group, wheels, frontFoot, backFoot, shoes, soles };
+}
+
+function hexColor(css) {
+  return parseInt(css.slice(1), 16);
+}
+
+/** Across the deck. Regular toes −X. Shin on the inner/heel side. */
+export function orientFeet(model, regular) {
+  const yaw = regular ? 0 : Math.PI;
+  const side = regular ? 1 : -1;
+  model.frontFoot.rotation.y = yaw;
+  model.backFoot.rotation.y = yaw;
+  // Local +Z flips with goofy yaw. Push the shoe away from the midline.
+  const fz = Math.sign(model.frontFoot.position.z || 1) * IN * side;
+  const bz = Math.sign(model.backFoot.position.z || -1) * IN * side;
+  for (const child of model.frontFoot.children) child.position.z = fz;
+  for (const child of model.backFoot.children) child.position.z = bz;
 }
 
 /** Stick up (−Y) slides a foot toward the nose (+Z). Centered = over the trucks. */
-export function placeFeet(model, front, back) {
+export function placeFeet(model, front, back, regular) {
   model.frontFoot.position.set(front.x * FOOT_X, 0.028, 0.18 - front.y * FOOT_Z);
   model.backFoot.position.set(back.x * FOOT_X, 0.028, -0.18 - back.y * FOOT_Z);
+  orientFeet(model, regular);
+}
+
+/** L3+R3: front/back take the stick that owns that foot. */
+export function paintFeet(model, on, regular) {
+  const left = hexColor(STICK_LEFT);
+  const right = hexColor(STICK_RIGHT);
+  const front = on ? (regular ? left : right) : SHOE;
+  const back = on ? (regular ? right : left) : SHOE;
+  model.shoes[0].color.setHex(front);
+  model.shoes[1].color.setHex(back);
+  model.soles[0].color.setHex(on ? front : GUM);
+  model.soles[1].color.setHex(on ? back : GUM);
+  if (on) {
+    model.soles[0].color.multiplyScalar(0.62);
+    model.soles[1].color.multiplyScalar(0.62);
+  }
 }

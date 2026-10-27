@@ -10,7 +10,7 @@ import {
 import { applySpawn, createBoardState, poseAt } from "./physics/board.js";
 import { carryBusy, createWalker, plantUnderFeet, selfCheckWalker, stepCarry, stepWalker } from "./physics/skater.js";
 import { selfCheck, stepWorld } from "./physics/world.js";
-import { createBoardModel, placeFeet } from "./scene/boardModel.js";
+import { createBoardModel, orientFeet, paintFeet, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, orbitCamera, seedOrbit, setupScene } from "./scene/setup.js";
 import { carryBoardWorld, createSkater, placeSkater, poseSkater, selfCheckSkater, setHoodie } from "./scene/skaterModel.js";
@@ -551,8 +551,10 @@ function tick(now) {
   loco.moving = walker.moving;
   loco.running = walker.running;
   loco.yaw = walker.yaw;
-  if (walker.carry <= 0) placeFeet(model, input.front, input.back);
+  if (walker.carry <= 0) placeFeet(model, input.front, input.back, board.regular);
   poseSkater(skater, model, input, board, frameDt, loco);
+  if (walker.carry > 0) orientFeet(model, board.regular);
+  paintFeet(model, playing && stickDebug, board.regular);
   placeSkater(skater, _pos, board, loco);
   placeDeck();
   if (walker.carry <= 0) {
