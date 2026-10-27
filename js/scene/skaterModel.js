@@ -166,9 +166,9 @@ function limb(nearR, farR, mat) {
   return mesh;
 }
 
-function bentArm(cloth, skin) {
+function bentArm(cloth, skin, side) {
   const g = new THREE.Group();
-  const upper = hung(0.03, 0.2, cloth);
+  const upper = hung(0.045, 0.2, cloth, 0.58, -side * 0.028);
   const fore = hung(0.025, 0.18, cloth);
   fore.position.y = -0.2;
   fore.rotation.x = 0.7;
@@ -181,9 +181,19 @@ function bentArm(cloth, skin) {
   return g;
 }
 
-function hung(radius, length, mat) {
-  const geo = new THREE.CylinderGeometry(radius, radius * 0.85, length, 14);
+/** Hang from the shoulder. Optional taper (elbow / shoulder) and Z inset at the top. */
+function hung(radius, length, mat, taper = 0.85, inset = 0) {
+  const geo = new THREE.CylinderGeometry(radius, radius * taper, length, 14);
   geo.translate(0, -length / 2, 0);
+  if (inset) {
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const t = 1 + pos.getY(i) / length;
+      pos.setZ(i, pos.getZ(i) + inset * t);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   return mesh;
@@ -269,18 +279,18 @@ export function createSkater() {
   mouth.rotation.set(0, Math.PI / 2, Math.PI);
   mouth.position.set(0.06, -0.022, 0);
   head.add(mouth);
-  const armL = bentArm(hoodie, skin);
-  const armR = bentArm(hoodie, skin);
-  const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 10), hoodie);
+  const armL = bentArm(hoodie, skin, 1);
+  const armR = bentArm(hoodie, skin, -1);
+  const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 10), hoodie);
   const shoulderR = shoulderL.clone();
-  shoulderL.position.set(0.02, 0.278, 0.125);
-  shoulderR.position.set(0.02, 0.278, -0.125);
-  shoulderL.scale.set(1.1, 0.78, 1.28);
-  shoulderR.scale.set(1.1, 0.78, 1.28);
+  shoulderL.position.set(0.02, 0.268, 0.092);
+  shoulderR.position.set(0.02, 0.268, -0.092);
+  shoulderL.scale.set(1, 0.7, 1);
+  shoulderR.scale.set(1, 0.7, 1);
   shoulderL.castShadow = true;
   shoulderR.castShadow = true;
-  armL.position.set(0.02, 0.268, 0.132);
-  armR.position.set(0.02, 0.268, -0.132);
+  armL.position.set(0.02, 0.268, 0.1);
+  armR.position.set(0.02, 0.268, -0.1);
   chest.add(torso, hood, head, shoulderL, shoulderR, armL, armR);
 
   // Pants. Sits in the crook: top at the hoodie hem, underside in the thigh.
