@@ -5,7 +5,7 @@ export const HOWTO_BODY =
   "Regular (default): left stick = front foot, right stick = back foot. ○ on the ground swaps to Goofy, which flips that.\n\n" +
   "□ push left foot. × push right foot. Once per press, on the ground.\n" +
   "Stick Y is weight. Back foot down lifts the nose. Front foot down is the nollie crouch.\n" +
-  "L2 / R2 turn. R1 low cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
+  "L2 / R2 turn. R1 low cam. ← backside · → frontside cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
   "Ollie: hold the back stick down, flick the front stick up. Catch is automatic near a full turn.\n" +
   "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders.\n" +
   "Pause → Options is hoodie, day/night, audio, and those sliders. Time scale lives in advanced.\n" +

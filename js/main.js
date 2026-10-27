@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, persistSkyClock, selfCheckSky, selfCheckTune } from "./constants.js";
+import { CAM_OFFSET_STOCK, FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, getTune, persistSkyClock, selfCheckSky, selfCheckTune, setTune } from "./constants.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -121,7 +121,10 @@ let stickDebug = false;
 let stickLatch = false;
 let lowCam = false;
 let r1Latch = false;
+let camLeftLatch = false;
+let camRightLatch = false;
 let camFlash = 0;
+let camMsg = "";
 let optHold = 0;
 let optOpened = false;
 let optWas = false;
@@ -144,7 +147,7 @@ function settleBoard() {
   for (let i = 0; i < 80 && !board.grounded; i++) {
     stepWorld(board, FIXED_DT, IDLE_INPUT, floors, grinds, solids);
   }
-  followCamera(camera, board.pos, board.quat, 8, sun, lowCam);
+  followCamera(camera, board.pos, board.quat, 8, sun, lowCam, board.regular);
 }
 
 function setSpawnHere() {
@@ -349,7 +352,7 @@ function hudText() {
     if (walker.moving) return "walking";
     return "loitering";
   }
-  if (camFlash > 0) return lowCam ? "LOW CAM" : "FOLLOW";
+  if (camFlash > 0) return camMsg;
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
   const trick = board.grinding
@@ -459,9 +462,22 @@ function tick(now) {
     board.triangleLatch = input.triangle;
     if (onBoard() && input.r1 && !r1Latch) {
       lowCam = !lowCam;
+      camMsg = lowCam ? "LOW CAM" : "FOLLOW";
       camFlash = 1.2;
     }
     r1Latch = input.r1;
+    if (onBoard() && input.dpadLeft && !camLeftLatch) {
+      const t = getTune().camOffset;
+      const next = Math.abs(t - 0.5) < 1e-6 ? CAM_OFFSET_STOCK : Math.min(t, 1 - t);
+      if (Math.abs(next - t) > 1e-6) setTune("camOffset", next);
+    }
+    if (onBoard() && input.dpadRight && !camRightLatch) {
+      const t = getTune().camOffset;
+      const next = Math.abs(t - 0.5) < 1e-6 ? 1 - CAM_OFFSET_STOCK : Math.max(t, 1 - t);
+      if (Math.abs(next - t) > 1e-6) setTune("camOffset", next);
+    }
+    camLeftLatch = input.dpadLeft;
+    camRightLatch = input.dpadRight;
     if (camFlash > 0) camFlash = Math.max(0, camFlash - frameDt);
     if (onBoard() && input.circle && !board.circleLatch) {
       if (board.grinding) {
@@ -575,7 +591,7 @@ function tick(now) {
   if (walker.carry > 0) {
     orbitCamera(camera, skater.root.position, walker.camYaw, walker.camPitch, frameDt, sun);
   } else {
-    followCamera(camera, _pos, skater.root.quaternion, frameDt, sun, lowCam);
+    followCamera(camera, _pos, skater.root.quaternion, frameDt, sun, lowCam, board.regular);
   }
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

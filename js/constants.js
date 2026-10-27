@@ -76,8 +76,14 @@ export const STEER_PIVOT = 0.9;
 /** Follow camera distance behind the board (m). Far enough to see the rider. */
 export const CAM_BACK = 2.45;
 
-/** Stay on the board's rear axis. A side offset reads as behind-left. */
-export const CAM_SIDE = 0;
+/**
+ * Max on-board side offset (m) at 0% / 100% of Cam offset.
+ * 50% is dead-center. Default 35% is 0.3 × this (~0.6 m). Backside = board +X.
+ */
+export const CAM_OFFSET_MAX = 2;
+export const CAM_OFFSET_STOCK = 0.35;
+/** Signed meters, backside-positive. The advanced slider publishes this. */
+export let CAM_OFFSET = (0.5 - CAM_OFFSET_STOCK) * 2 * CAM_OFFSET_MAX;
 
 /** Follow camera height (m). */
 export const CAM_HEIGHT = 1.05;
@@ -90,7 +96,6 @@ export const CAM_FOLLOW = 7.5;
 
 /** R1 low camera. Close to the deck, skate-video height. */
 export const CAM_LOW_BACK = 1.45;
-export const CAM_LOW_SIDE = 0;
 export const CAM_LOW_HEIGHT = 0.34;
 export const CAM_LOW_LOOK = 0.16;
 
@@ -308,6 +313,8 @@ export const TUNABLES = [
   { id: "push", label: "Push", min: 0.5, max: 1.8 },
   { id: "steer", label: "Steer", min: 0.4, max: 1.8 },
   { id: "turn", label: "Trigger turn", min: 0.4, max: 1.8 },
+  // 50% is today's centered follow cam. 0% full backside, 100% full frontside.
+  { id: "camOffset", label: "Cam offset", min: 0, max: 1, default: CAM_OFFSET_STOCK },
   { id: "volume", label: "Volume", min: 0, max: 1.6 },
   { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 3 },
 ];
@@ -316,7 +323,7 @@ export const TUNABLES = [
 export const ADVANCED_TUNABLES = TUNABLES.filter((t) => t.id !== "volume");
 
 const TUNE_KEY = "noisses-tune";
-const tune = Object.fromEntries(TUNABLES.map((t) => [t.id, 1]));
+const tune = Object.fromEntries(TUNABLES.map((t) => [t.id, t.default ?? 1]));
 
 function clampTune(id, value) {
   const spec = TUNABLES.find((t) => t.id === id);
@@ -335,6 +342,7 @@ function publishTune() {
   DUMPTRUCK = TUNE_BASE.dumptruck * tune.dumptruck;
   GRAVITY = TUNE_BASE.gravity * tune.gravity;
   TIME_SCALE = TUNE_BASE.timeScale * tune.timeScale;
+  CAM_OFFSET = (0.5 - tune.camOffset) * 2 * CAM_OFFSET_MAX;
 }
 
 export function getTune() {
@@ -357,7 +365,7 @@ export function setTune(id, value, persist = true) {
 export function resetTune(ids) {
   for (const t of TUNABLES) {
     if (ids && !ids.includes(t.id)) continue;
-    tune[t.id] = 1;
+    tune[t.id] = t.default ?? 1;
   }
   publishTune();
   try {
@@ -521,6 +529,15 @@ export function selfCheckTune() {
   if (formatTimeScale(1 / 60) !== "1h = 1h") throw new Error("tune timeScale realtime");
   if (formatTimeScale(12) !== "1h = 5s") throw new Error("tune timeScale 5s");
   if (formatTimeScale(120) !== "1h = 0.5s") throw new Error("tune timeScale max");
+  setTune("camOffset", 9, false);
+  if (tune.camOffset !== 1) throw new Error("tune camOffset clamp");
+  if (Math.abs(CAM_OFFSET + CAM_OFFSET_MAX) > 0.01) throw new Error("tune camOffset max");
+  setTune("camOffset", 0.5, false);
+  if (Math.abs(CAM_OFFSET) > 1e-9) throw new Error("tune camOffset center");
+  setTune("camOffset", CAM_OFFSET_STOCK, false);
+  if (Math.abs(CAM_OFFSET - (0.5 - CAM_OFFSET_STOCK) * 2 * CAM_OFFSET_MAX) > 0.01) {
+    throw new Error("tune camOffset stock");
+  }
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
 }
 

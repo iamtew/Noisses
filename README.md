@@ -18,7 +18,8 @@ PlayStation face buttons. On the board, left stick is the front foot and right s
 
 - **△ Triangle** — get off the board, or get back on. The deck sits in the left hand, graphic out, gripped at the truck. Left stick walks, right stick swings the camera, × jumps, a second × runs until the stick recenters.
 - **L3 + R3** — stick debug, both clicks together.
-- **Hold Options** — advanced sliders, including gravity and time scale. 20% gravity is a lazy hang. 220% is a short hop. Time scale stock is 1 game hour per real minute.
+- **← / →** — on the board, backside / frontside follow cam. Cam offset lives in advanced; 50% is dead-center, stock is 35% backside.
+- **Hold Options** — advanced sliders, including gravity, time scale, and cam offset. 20% gravity is a lazy hang. 220% is a short hop. Time scale stock is 1 game hour per real minute.
 - **Pause → Options** — hoodie, day/night (24h clock + sun angle), audio, then advanced.
 
 ## License

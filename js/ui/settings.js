@@ -32,7 +32,7 @@ export function bindSettings(root, onChange) {
     btn.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".tune-reset")) {
         index = SPECS.indexOf(spec);
-        setTune(spec.id, 1);
+        setTune(spec.id, spec.default ?? 1);
         onChange(AUDIO_MASTER);
         paint();
         return;
@@ -127,7 +127,7 @@ export function bindSettings(root, onChange) {
         paint();
         return;
       }
-      setTune(SPECS[index].id, 1);
+      setTune(SPECS[index].id, SPECS[index].default ?? 1);
       onChange(AUDIO_MASTER);
       paint();
     },

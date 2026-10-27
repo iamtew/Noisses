@@ -7,8 +7,7 @@ import {
   CAM_LOW_BACK,
   CAM_LOW_HEIGHT,
   CAM_LOW_LOOK,
-  CAM_LOW_SIDE,
-  CAM_SIDE,
+  CAM_OFFSET,
   ORBIT_PITCH_MAX,
   ORBIT_PITCH_MIN,
   TWILIGHT_ABOVE,
@@ -124,7 +123,7 @@ export function setupScene(canvas) {
     0.08,
     250,
   );
-  camera.position.set(CAM_SIDE, CAM_HEIGHT, -CAM_BACK);
+  camera.position.set(CAM_OFFSET, CAM_HEIGHT, -CAM_BACK);
 
   const hemi = new THREE.HemisphereLight(0xd7e2ee, 0x746c62, 0.95);
   scene.add(hemi);
@@ -162,9 +161,9 @@ export function setupScene(canvas) {
 }
 
 /** `quat` is rider heading (pitch/yaw/roll). Do not pass the flipping deck. */
-export function followCamera(camera, pos, quat, dt, sun, low) {
+export function followCamera(camera, pos, quat, dt, sun, low, regular = true) {
   const back = low ? CAM_LOW_BACK : CAM_BACK;
-  const side = low ? CAM_LOW_SIDE : CAM_SIDE;
+  const side = CAM_OFFSET * (regular ? 1 : -1);
   const height = low ? CAM_LOW_HEIGHT : CAM_HEIGHT;
   const lookY = low ? CAM_LOW_LOOK : CAM_LOOK_Y;
   _back.set(0, 0, -1).applyQuaternion(quat);
@@ -178,7 +177,8 @@ export function followCamera(camera, pos, quat, dt, sun, low) {
   _desired.copy(pos).add(_back).addScaledVector(_right, side);
   _desired.y = pos.y + height;
   camera.position.lerp(_desired, 1 - Math.exp(-CAM_FOLLOW * dt));
-  _look.copy(pos);
+  // Same side shift on the look point so the rig trucks, it does not yaw in.
+  _look.copy(pos).addScaledVector(_right, side);
   _look.y += lookY;
   camera.lookAt(_look);
 
