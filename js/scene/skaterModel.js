@@ -338,6 +338,15 @@ export function createSkater() {
   return skater;
 }
 
+/** Feet live on root. Legs live on body. Same axes only when the body is not yawing. */
+function ankleFromFoot(skater, foot, out) {
+  out.copy(foot.position);
+  out.y += 0.04;
+  out.sub(skater.body.position);
+  _rootQ.copy(skater.body.quaternion).invert();
+  out.applyQuaternion(_rootQ);
+}
+
 /** Knee pokes toward the toes. `pole` is the bend direction; on the board that is sideways. */
 function leg(upper, lower, hip, ankle, side, pole) {
   _a.copy(ankle).sub(hip);
@@ -458,13 +467,11 @@ export function poseSkater(skater, model, input, board, dt, loco) {
   skater.armR.rotation.y = -s * 1.15;
 
   _hip.set(0, hipY, 0.03);
-  _ankle.copy(model.frontFoot.position);
-  _ankle.y += 0.04;
+  ankleFromFoot(skater, model.frontFoot, _ankle);
   leg(skater.frontUpper, skater.frontLower, _hip, _ankle, side);
 
   _hip.set(0, hipY, -0.03);
-  _ankle.copy(model.backFoot.position);
-  _ankle.y += 0.04;
+  ankleFromFoot(skater, model.backFoot, _ankle);
   leg(skater.backUpper, skater.backLower, _hip, _ankle, side);
 
   const flop = Math.min(1, (board.bailed || 0) / 1.2);
@@ -542,12 +549,10 @@ function poseOff(skater, model, input, board, dt, loco) {
 
   _facePole.set(faceX, 0.45, 0);
   _hip.set(0.02 * faceX, skater.chest.position.y, hipWide * leftZ);
-  _ankle.copy(model.frontFoot.position);
-  _ankle.y += 0.04;
+  ankleFromFoot(skater, model.frontFoot, _ankle);
   leg(skater.frontUpper, skater.frontLower, _hip, _ankle, leftZ, _facePole);
   _hip.set(0.02 * faceX, skater.chest.position.y, -hipWide * leftZ);
-  _ankle.copy(model.backFoot.position);
-  _ankle.y += 0.04;
+  ankleFromFoot(skater, model.backFoot, _ankle);
   leg(skater.backUpper, skater.backLower, _hip, _ankle, -leftZ, _facePole);
 
   jiggleButt(skater, speed, vel.y || 0, dt);
@@ -629,6 +634,12 @@ export function selfCheckSkater() {
   if (!(Math.abs(skater.armR.rotation.y) < 0.05)) throw new Error("skater flossed while loitering");
   if (!(skater.armL.rotation.x < -0.4)) throw new Error("left arm should hang out, not across the chest");
   if (!(skater.chest.position.y > 0.48)) throw new Error("knees still folded");
+  skater.root.updateMatrixWorld(true);
+  const idleEnd = new THREE.Vector3(0, 0.5, 0);
+  skater.frontLower.localToWorld(idleEnd);
+  const idleAt = new THREE.Vector3(model.frontFoot.position.x, model.frontFoot.position.y + 0.04, model.frontFoot.position.z);
+  skater.root.localToWorld(idleAt);
+  if (idleEnd.distanceTo(idleAt) > 0.03) throw new Error("idle shin missed the foot");
   let chestDelta = skater.chest.rotation.y - Math.PI;
   while (chestDelta > Math.PI) chestDelta -= Math.PI * 2;
   while (chestDelta < -Math.PI) chestDelta += Math.PI * 2;
@@ -645,6 +656,12 @@ export function selfCheckSkater() {
   const armRest = skater.armR.rotation.y;
   for (let i = 0; i < 40; i++) poseSkater(skater, model, input, board, 0.016, loco);
   if (!(Math.abs(skater.armR.rotation.y - armRest) > 0.08)) throw new Error("skater should floss while walking");
+  skater.root.updateMatrixWorld(true);
+  const walkEnd = new THREE.Vector3(0, 0.5, 0);
+  skater.frontLower.localToWorld(walkEnd);
+  const walkAt = new THREE.Vector3(model.frontFoot.position.x, model.frontFoot.position.y + 0.04, model.frontFoot.position.z);
+  skater.root.localToWorld(walkAt);
+  if (walkEnd.distanceTo(walkAt) > 0.03) throw new Error("walk shin missed the foot");
   loco.vel.y = 0;
   skater.prevVy = 0;
   poseSkater(skater, model, input, board, 0.016, loco);
