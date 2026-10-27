@@ -306,12 +306,6 @@ function nearTurns(angle, turns, step = Math.PI * 2) {
   return Math.abs(angle) > need * 0.45 && err < CATCH_ANGLE;
 }
 
-function bakeShuv(board) {
-  board.yaw = (board.yaw || 0) + board.shuv;
-  board.shuv = 0;
-  board.shuvRate = 0;
-}
-
 function applySpin(board, row) {
   if (!row) return;
   if (row.flip) board.flipRate = row.flip * FLIP_SPIN;
@@ -346,9 +340,10 @@ export function stepFlip(input, board, dt, airborne) {
     if (board.trickRow && !board.spinApplied) return;
     board.spinApplied = false;
     if (board.caught || (Math.abs(board.flip) < 0.05 && Math.abs(board.shuv) < 0.05)) {
-      bakeShuv(board);
       board.flip = 0;
       board.flipRate = 0;
+      board.shuv = wrapPi(board.shuv);
+      board.shuvRate = 0;
       board.caught = true;
       board.trick = "";
       board.trickRow = null;
@@ -382,7 +377,7 @@ export function stepFlip(input, board, dt, airborne) {
         board.shuv = need;
       } else board.shuv = 0;
       board.flipRate = 0;
-      bakeShuv(board);
+      board.shuvRate = 0;
       board.caught = true;
     }
   }
@@ -530,8 +525,8 @@ export function selfCheckFlip() {
   const idle = { front: { x: 0, y: 0.8 }, back: { x: 0, y: 0.8 } };
   for (let i = 0; i < 50 && !shuvBoard.caught; i++) stepFlip(idle, shuvBoard, FIXED_DT, true);
   if (!shuvBoard.caught) throw new Error("flip self-check: shove-it should catch at 180");
-  if (Math.abs(Math.abs(shuvBoard.yaw) - Math.PI) > 0.05) {
-    throw new Error("flip self-check: shove-it should bake 180 into yaw");
+  if (Math.abs(shuvBoard.yaw) > 0.05) throw new Error("flip self-check: shove-it must not spin rider yaw");
+  if (Math.abs(Math.abs(shuvBoard.shuv) - Math.PI) > 0.05) {
+    throw new Error("flip self-check: shove-it should rest at 180 on the deck");
   }
-  if (Math.abs(shuvBoard.shuv) > 1e-6) throw new Error("flip self-check: shove-it shuv should bake away");
 }

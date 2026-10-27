@@ -41,6 +41,7 @@ import { detectPop, feetSplit, stepFlip, stepManual, wrapPi } from "../tricks/de
 const DOWN = new THREE.Vector3(0, -1, 0);
 const _origin = new THREE.Vector3();
 const _forward = new THREE.Vector3();
+const _ride = new THREE.Vector3();
 const _truck = new THREE.Vector3();
 const _to = new THREE.Vector3();
 const _railPt = new THREE.Vector3();
@@ -58,8 +59,9 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   const airborne = !board.grounded;
   const front = input.front || { x: 0, y: 0 };
   const back = input.back || { x: 0, y: 0 };
-  _forward.set(0, 0, 1).applyQuaternion(board.quat);
-  updateRide(board, _forward);
+  _euler.set(board.pitch, board.yaw, board.roll);
+  _ride.set(0, 0, 1).applyEuler(_euler);
+  updateRide(board, _ride);
   // L2 left, R2 right. Was R2−L2 and air-only; that felt inverted and dead on the pad.
   const lean = (input.l2 || 0) - (input.r2 || 0);
   const turn = STEER_RATE * Math.min(speed, 2) + STEER_PIVOT;
@@ -102,15 +104,17 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
+  _euler.set(board.pitch, board.yaw, board.roll);
+  _ride.set(0, 0, 1).applyEuler(_euler);
 
   board.vel.y -= GRAVITY * dt;
 
   if (board.grounded) {
     if (input.pushLeft && !board.pushLeftLatch) {
-      board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
+      board.vel.addScaledVector(_ride, PUSH_IMPULSE / BOARD_MASS);
     }
     if (input.pushRight && !board.pushRightLatch) {
-      board.vel.addScaledVector(_forward, PUSH_IMPULSE / BOARD_MASS);
+      board.vel.addScaledVector(_ride, PUSH_IMPULSE / BOARD_MASS);
     }
   }
   board.pushLeftLatch = Boolean(input.pushLeft);

@@ -313,6 +313,9 @@ export function selfCheckCatalog() {
   if (!nollie || nollie.name !== "kickflip" || trickLabel(nollie) !== "nollie kickflip") {
     throw new Error("catalog nollie kickflip");
   }
+  const spin = { vel: { x: 0, z: 2 }, fakie: true, switched: false };
+  updateRide(spin, { x: 0, z: 1 });
+  if (spin.fakie) throw new Error("catalog fakie ignores deck spin");
   const feet = { switched: false, fakie: false };
   syncFeet(feet);
   if (!feet.regular || feet.ride !== "normal") throw new Error("catalog regular feet");
