@@ -30,7 +30,8 @@ const _cb = new THREE.Color();
 
 /** Keep the caster near the rider so the shadow frustum still fits. Discs sit farther. */
 const LIGHT_DIST = 18;
-const DISC_DIST = 42;
+/** Past the ferry (~100 m). Camera far is 250. */
+const DISC_DIST = 220;
 
 // Invented plaza sky. Day bg is the old 0x8b9aaa fog.
 const SKY_STOPS = [
@@ -74,12 +75,20 @@ function skyDir(out, azDeg, elevDeg) {
   else out.normalize();
 }
 
+function fadeDisc(mesh, a) {
+  mesh.material.opacity = a;
+  mesh.material.transparent = a < 0.98;
+  mesh.material.depthWrite = a >= 0.98;
+  mesh.visible = a > 0.02;
+}
+
 function discMesh(color, r) {
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(r, 20, 16),
     new THREE.MeshBasicMaterial({
       color,
       fog: false,
+      depthTest: true,
       depthWrite: false,
       transparent: true,
       opacity: 1,
@@ -88,6 +97,7 @@ function discMesh(color, r) {
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   mesh.frustumCulled = false;
+  mesh.renderOrder = -2;
   return mesh;
 }
 
@@ -135,8 +145,8 @@ export function setupScene(canvas) {
   scene.add(sun);
   scene.add(sun.target);
 
-  const sunDisc = discMesh(0xffe8b0, 6.5);
-  const moonDisc = discMesh(0xdde6f4, 5);
+  const sunDisc = discMesh(0xffe8b0, 34);
+  const moonDisc = discMesh(0xdde6f4, 26);
   scene.add(sunDisc, moonDisc);
 
   sky = { renderer, scene, hemi, fill, sun, sunDisc, moonDisc };
@@ -191,10 +201,8 @@ function parkSun(sun, pos) {
   sky.moonDisc.position.copy(pos).addScaledVector(_moonDir, DISC_DIST);
   const sunA = THREE.MathUtils.clamp((elev + TWILIGHT_BELOW) / (TWILIGHT_BELOW + TWILIGHT_ABOVE), 0, 1);
   const moonA = 1 - THREE.MathUtils.clamp((elev + 4) / (TWILIGHT_BELOW + TWILIGHT_ABOVE), 0, 1);
-  sky.sunDisc.material.opacity = sunA;
-  sky.moonDisc.material.opacity = moonA;
-  sky.sunDisc.visible = sunA > 0.02;
-  sky.moonDisc.visible = moonA > 0.02;
+  fadeDisc(sky.sunDisc, sunA);
+  fadeDisc(sky.moonDisc, moonA);
 
   sky.scene.background.copy(sampleStop(minutes, "bg"));
   sky.scene.fog.color.copy(sampleStop(minutes, "fog"));
