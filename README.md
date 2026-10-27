@@ -28,9 +28,9 @@ PlayStation face buttons. Regular stance (default): left stick = front foot, rig
 - **Manual** — while rolling, hold one foot down and keep the other near center. Back foot is a tail manual, front foot a nose manual. The heavy foot balances it. Let go to drop out. Fall over and you bail.
 - **Powerslide** — one foot toward the nose and the other toward the tail. Speed scrubs off and the board pivots.
 - **○ Circle** — toggle Regular / Goofy (on the ground)
-- **△ Triangle** — stick debug overlay
+- **△ Triangle** — stick debug overlay (left foot red, right foot purple, short trail)
 - **R1** — low camera / follow camera
-- **Options** — pause (resume, restart, hoodie color, advanced, exit). **Hold Options** — advanced settings (pop, flip, shuv, grind friction, push, steer, turn, volume, dumptruck). D-pad or left stick adjusts. ○ or Options closes. Saved in the browser. Exit reloads the page.
+- **Options** — pause (resume, restart, hoodie, how to play, advanced, exit). Hoodie is a sub-menu: solid / stripes / checks / dots / chevrons, color 1, and color 2 on patterns (starts as a hue offset of color 1). How to play has a trick list with looping stick demos. **Hold Options** — advanced settings (pop, flip, shuv, grind friction, push, steer, turn, volume, dumptruck). D-pad or left stick adjusts. ○ or Options pops a sub-menu, or closes pause on the root. Saved in the browser. Exit reloads the page.
 - **L2** — turn left (ground and air)
 - **R2** — turn right (ground and air)
 - **Hold D-pad down** — set spawn at your feet (tap does nothing). A mark paints on the ground.

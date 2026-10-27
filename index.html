@@ -52,13 +52,49 @@
       </div>
     </div>
     <div id="pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
-      <h2 id="pause-title">NOISSES</h2>
-      <p class="tag">You are a skateboarder. But why?</p>
-      <div data-pause-list></div>
-      <div data-hoodie hidden>
-        <div data-iro></div>
+      <h2 id="pause-title" data-pause-title>NOISSES</h2>
+      <p class="tag" data-pause-tag>You are a skateboarder. But why?</p>
+      <div data-screen="root">
+        <div data-pause-list></div>
       </div>
-      <p>↑↓ select · × confirm · ○ or Options closes · hold Options for advanced</p>
+      <div data-screen="hoodie" hidden>
+        <button type="button" class="row" data-hoodie-pattern>
+          <span class="name">Pattern</span>
+          <span data-val></span>
+        </button>
+        <button type="button" class="row reset" data-hoodie-a>Color 1</button>
+        <button type="button" class="row reset" data-hoodie-b>Color 2</button>
+        <div data-hoodie-colors>
+          <div data-iro-a></div>
+          <div data-color-b><div data-iro-b></div></div>
+        </div>
+        <button type="button" class="row reset" data-hoodie-back>Back</button>
+      </div>
+      <div data-screen="howto" hidden>
+        <p class="howto" data-howto-body></p>
+        <div data-howto-list></div>
+      </div>
+      <div data-screen="tricks" hidden>
+        <div class="tricks">
+          <div data-trick-list></div>
+          <div class="trick-demo">
+            <p data-trick-blurb></p>
+            <div class="pads" data-trick-sticks>
+              <div class="pad">
+                <i data-hub></i>
+                <b data-dot></b>
+                <span data-label>L front</span>
+              </div>
+              <div class="pad">
+                <i data-hub></i>
+                <b data-dot></b>
+                <span data-label>R back</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p data-pause-hint>↑↓ select · × confirm · ○ or Options closes · hold Options for advanced</p>
     </div>
     <div id="menu" hidden role="dialog" aria-modal="true" aria-labelledby="menu-title">
       <h2 id="menu-title">SETTINGS</h2>

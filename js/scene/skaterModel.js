@@ -15,28 +15,139 @@ const THIGH = 0.26;
 const SHIN = 0.25;
 const FLOSS_MIN = 0.5;
 const HOODIE_KEY = "noisses-hoodie";
-export const HOODIE_DEFAULT = "#2e6fbf";
+const HOODIE_TEX = 128;
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+export const HOODIE_PATTERNS = ["solid", "stripes", "checks", "dots", "chevrons"];
+export const HOODIE_DEFAULT_A = "#2e6fbf";
+
+function clamp(n, a, b) {
+  return Math.min(b, Math.max(a, n));
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h * 60, s, l };
+}
+
+function hue2rgb(p, q, t) {
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+  return p;
+}
+
+function hslToHex(h, s, l) {
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hh = ((h % 360) + 360) % 360 / 360;
+  const r = Math.round(hue2rgb(p, q, hh + 1 / 3) * 255);
+  const g = Math.round(hue2rgb(p, q, hh) * 255);
+  const b = Math.round(hue2rgb(p, q, hh - 1 / 3) * 255);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** Second dye: hue +36°, a little darker. */
+export function offsetHoodie(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const hsl = rgbToHsl(r, g, b);
+  return hslToHex(hsl.h + 36, hsl.s, clamp(hsl.l * 0.78, 0.12, 0.72));
+}
+
+export function defaultHoodie() {
+  return { pattern: "solid", a: HOODIE_DEFAULT_A, b: offsetHoodie(HOODIE_DEFAULT_A) };
+}
+
+function parseLook(raw) {
+  if (!raw) return null;
+  if (HEX.test(raw)) return { pattern: "solid", a: raw, b: offsetHoodie(raw) };
+  try {
+    const o = JSON.parse(raw);
+    if (!o || !HEX.test(o.a)) return null;
+    const pattern = HOODIE_PATTERNS.includes(o.pattern) ? o.pattern : "solid";
+    const b = HEX.test(o.b) ? o.b : offsetHoodie(o.a);
+    return { pattern, a: o.a, b };
+  } catch {
+    return null;
+  }
+}
 
 export function loadHoodie() {
   try {
-    const hex = localStorage.getItem(HOODIE_KEY);
-    if (hex && /^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+    return parseLook(localStorage.getItem(HOODIE_KEY)) || defaultHoodie();
   } catch {
-    /* private window */
+    return defaultHoodie();
   }
-  return HOODIE_DEFAULT;
 }
 
-export function saveHoodie(hex) {
+export function saveHoodie(look) {
   try {
-    localStorage.setItem(HOODIE_KEY, hex);
+    localStorage.setItem(HOODIE_KEY, JSON.stringify(look));
   } catch {
     /* private window */
   }
 }
 
-export function setHoodie(skater, hex) {
-  skater.hoodie.color.set(hex);
+function paintPattern(ctx, look) {
+  const { a, b, pattern } = look;
+  const n = HOODIE_TEX;
+  ctx.fillStyle = a;
+  ctx.fillRect(0, 0, n, n);
+  if (pattern === "solid") return;
+  ctx.fillStyle = b;
+  if (pattern === "stripes") {
+    for (let y = 0; y < n; y += 32) ctx.fillRect(0, y, n, 16);
+  } else if (pattern === "checks") {
+    const s = 32;
+    for (let y = 0; y < n; y += s) {
+      for (let x = 0; x < n; x += s) {
+        if (((x + y) / s) % 2 === 0) ctx.fillRect(x, y, s, s);
+      }
+    }
+  } else if (pattern === "dots") {
+    for (let y = 12; y < n; y += 24) {
+      for (let x = 12; x < n; x += 24) {
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  } else if (pattern === "chevrons") {
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = b;
+    for (let y = -16; y < n + 16; y += 22) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 16);
+      ctx.lineTo(n / 2, y);
+      ctx.lineTo(n, y + 16);
+      ctx.stroke();
+    }
+  }
+}
+
+export function setHoodie(skater, look) {
+  paintPattern(skater.hoodieCtx, look);
+  skater.hoodieMap.needsUpdate = true;
+  skater.hoodie.color.set(0xffffff);
 }
 
 /** Leg segment. aim() points +Y at the far joint, so nearR is the hip or knee. */
@@ -83,7 +194,19 @@ export function createSkater() {
   const body = new THREE.Group();
   root.add(body);
   const pants = new THREE.MeshStandardMaterial({ color: 0x7d8ea3, roughness: 0.86 });
-  const hoodie = new THREE.MeshStandardMaterial({ color: loadHoodie(), roughness: 0.8 });
+  const hoodieCanvas = document.createElement("canvas");
+  hoodieCanvas.width = HOODIE_TEX;
+  hoodieCanvas.height = HOODIE_TEX;
+  const hoodieCtx = hoodieCanvas.getContext("2d");
+  const hoodieMap = new THREE.CanvasTexture(hoodieCanvas);
+  hoodieMap.colorSpace = THREE.SRGBColorSpace;
+  hoodieMap.wrapS = THREE.RepeatWrapping;
+  hoodieMap.wrapT = THREE.RepeatWrapping;
+  const hoodie = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: hoodieMap,
+    roughness: 0.8,
+  });
   const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.65 });
 
   const chest = new THREE.Group();
@@ -138,7 +261,7 @@ export function createSkater() {
   const backLower = limb(0.034, 0.026, pants);
   body.add(chest, frontUpper, frontLower, backUpper, backLower);
 
-  return {
+  const skater = {
     root,
     body,
     chest,
@@ -149,6 +272,8 @@ export function createSkater() {
     backUpper,
     backLower,
     hoodie,
+    hoodieCtx,
+    hoodieMap,
     butt,
     kick: 0,
     floss: 0,
@@ -162,6 +287,8 @@ export function createSkater() {
     prevVy: 0,
     prevSp: 0,
   };
+  setHoodie(skater, loadHoodie());
+  return skater;
 }
 
 /** Knee pokes toward the toes so the shin meets the shoe. */
@@ -315,4 +442,8 @@ export function selfCheckSkater() {
   if (!(Math.abs(skater.jigY) > 0.01)) throw new Error("butt ignored the pop");
   for (let i = 0; i < 200; i++) poseSkater(skater, model, input, board, 0.016);
   if (!(Math.abs(skater.jigY) < 0.005)) throw new Error("butt never settled");
+
+  const dye = offsetHoodie("#2e6fbf");
+  if (dye === "#2e6fbf") throw new Error("hoodie offset is a no-op");
+  setHoodie(skater, { pattern: "checks", a: "#2e6fbf", b: dye });
 }

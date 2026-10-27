@@ -13,6 +13,7 @@ import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
 import { followCamera, setupScene } from "./scene/setup.js";
 import { createSkater, placeSkater, poseSkater, selfCheckSkater, setHoodie } from "./scene/skaterModel.js";
+import { selfCheckHowto } from "./ui/howto.js";
 import { bindOverlay, bindPause } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
@@ -26,6 +27,7 @@ selfCheckSlide();
 selfCheckAudio();
 selfCheckSkater();
 selfCheckTune();
+selfCheckHowto();
 
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
@@ -48,17 +50,17 @@ const sfx = createAudio();
 const menu = bindSettings(document.getElementById("menu"), (v) => sfx.setVolume(v));
 let advancedFromPause = false;
 const pause = bindPause(document.getElementById("pause"), {
-  onHoodie(hex) {
-    setHoodie(skater, hex);
+  onHoodie(look) {
+    setHoodie(skater, look);
   },
   onPick(id) {
     if (id === "resume") pause.hide();
     else if (id === "restart") {
       respawnHere();
       pause.hide();
-    } else if (id === "hoodie") {
-      /* picker is already on this row */
-    } else if (id === "advanced") {
+    } else if (id === "hoodie") pause.openHoodie();
+    else if (id === "howto") pause.openHowto();
+    else if (id === "advanced") {
       pause.hide();
       advancedFromPause = true;
       menu.show();
@@ -295,19 +297,20 @@ function tick(now) {
     board.prevPos.copy(board.pos);
     board.prevQuat.copy(board.quat);
   } else if (playing && pause.isOpen()) {
-    if (input.options && !optWas) pause.hide();
-    if (input.circle && !board.circleLatch) pause.hide();
+    if (input.options && !optWas && !pause.back()) pause.hide();
+    if (input.circle && !board.circleLatch && !pause.back()) pause.hide();
     board.circleLatch = input.circle;
     if (input.dpadUp && !menuUp) pause.move(-1);
     if (input.dpadDown && !menuDown) pause.move(1);
     menuUp = input.dpadUp;
     menuDown = input.dpadDown;
-    if (input.dpadLeft && !menuLeft) pause.nudgeHue(-1);
-    if (input.dpadRight && !menuRight) pause.nudgeHue(1);
+    if (input.dpadLeft && !menuLeft) pause.nudge(-1);
+    if (input.dpadRight && !menuRight) pause.nudge(1);
     menuLeft = input.dpadLeft;
     menuRight = input.dpadRight;
     if (input.pushRight && !menuCross) pause.confirm();
     menuCross = input.pushRight;
+    pause.tick(frameDt);
     sfx.tick(0, false, false, 0);
     acc = 0;
     board.prevPos.copy(board.pos);

@@ -152,6 +152,17 @@ body {
   right: auto;
   transform: translate(-50%, -50%);
   width: min(22rem, calc(100vw - 2.4rem));
+  max-height: calc(100vh - 2rem);
+  overflow: hidden;
+}
+
+#pause[data-screen="hoodie"],
+#pause[data-screen="howto"] {
+  width: min(28rem, calc(100vw - 2.4rem));
+}
+
+#pause[data-screen="tricks"] {
+  width: min(34rem, calc(100vw - 2.4rem));
 }
 
 #menu[hidden],
@@ -175,14 +186,66 @@ body {
   color: #c8c4bc;
 }
 
-#pause [data-hoodie] {
+#pause [data-screen][hidden],
+#pause .row[hidden],
+#pause [data-color-b][hidden] {
+  display: none;
+}
+
+#pause [data-hoodie-pattern] {
+  grid-template-columns: 7.2rem 1fr;
+}
+
+#pause [data-hoodie-colors] {
   display: flex;
   justify-content: center;
+  gap: 0.8rem;
   margin: 0.35rem 0 0.55rem;
 }
 
-#pause [data-hoodie][hidden] {
+#pause [data-color-b][hidden] {
   display: none;
+}
+
+#pause .howto {
+  margin: 0 0 0.7rem;
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre-line;
+  line-height: 1.45;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: #d8d4cc;
+}
+
+#pause .tricks {
+  display: grid;
+  grid-template-columns: 11.5rem 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+#pause [data-trick-list] {
+  max-height: 13.5rem;
+  overflow: auto;
+}
+
+#pause .trick-demo {
+  padding-top: 0.2rem;
+}
+
+#pause [data-trick-blurb] {
+  margin: 0 0 1.4rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #d8d4cc;
+}
+
+#pause .pads {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.4rem 0 1.2rem;
 }
 
 #menu .row,
