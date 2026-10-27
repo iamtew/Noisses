@@ -121,6 +121,11 @@ export const MENU_HOLD = 0.55;
 /** How-to / trick list stick scroll (px/s at full stick). Down-positive, same as the pad. */
 export const MENU_SCROLL = 520;
 
+/** Trick HUD line stays this long, then fades (ms). */
+export const HUD_LOG_MS = 5000;
+/** Fade window at the end of HUD_LOG_MS (ms). */
+export const HUD_FADE_MS = 800;
+
 /** Master gain for synthesized skate bed. */
 export let AUDIO_MASTER = 0.38;
 

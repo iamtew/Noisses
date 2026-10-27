@@ -20,17 +20,29 @@ body {
 
 #hud {
   position: fixed;
-  left: 1.15rem;
+  right: 1.15rem;
   bottom: 1.15rem;
-  max-width: 28rem;
-  font-size: 0.78rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.18rem;
+  max-width: 32rem;
+  font-size: 1.05rem;
   font-weight: 550;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #f4f1ea;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  opacity: 0.88;
   pointer-events: none;
+}
+
+#hud.up {
+  bottom: 7rem;
+}
+
+#hud span {
+  display: block;
+  text-align: right;
 }
 
 #hud[hidden] {

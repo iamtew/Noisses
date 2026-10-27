@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { FIXED_DT, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, persistSkyClock, selfCheckSky, selfCheckTune } from "./constants.js";
+import { FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, persistSkyClock, selfCheckSky, selfCheckTune } from "./constants.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -295,6 +295,47 @@ function closeAdvanced() {
   advancedFromPause = false;
 }
 
+const hudLines = [];
+
+function hudKey(text) {
+  if (text.startsWith("ADVANCED")) return "ADVANCED";
+  if (text.startsWith("SET SPAWN")) return "SET SPAWN";
+  if (text.startsWith("RESPAWN")) return "RESPAWN";
+  return text;
+}
+
+function paintHud(now) {
+  const text = hudText();
+  if (text) {
+    const key = hudKey(text);
+    const last = hudLines[hudLines.length - 1];
+    if (last && last.key === key) {
+      last.text = text;
+      last.born = now;
+    } else if (!last || last.text !== text) {
+      hudLines.push({ text, key, born: now });
+    }
+  }
+  const die = HUD_LOG_MS + HUD_FADE_MS;
+  const fade = HUD_FADE_MS;
+  const live = HUD_LOG_MS;
+  while (hudLines.length > 1 && now - hudLines[0].born > die) hudLines.shift();
+  while (hud.childElementCount > hudLines.length) hud.lastChild.remove();
+  hudLines.forEach((line, i) => {
+    let el = hud.children[i];
+    if (!el) {
+      el = document.createElement("span");
+      hud.appendChild(el);
+    }
+    if (el.textContent !== line.text) el.textContent = line.text;
+    const age = now - line.born;
+    const op = i === hudLines.length - 1 || age <= live
+      ? "0.92"
+      : String(Math.max(0, 1 - (age - live) / fade) * 0.92);
+    if (el.style.opacity !== op) el.style.opacity = op;
+  });
+}
+
 function hudText() {
   if (!menusOpen() && optHold > 0) return `ADVANCED  ${Math.min(99, Math.floor((optHold / MENU_HOLD) * 100))}%`;
   if (holdDown > 0 && !firedDown) return `SET SPAWN  ${Math.min(99, Math.floor((holdDown / SPAWN_HOLD) * 100))}%`;
@@ -495,7 +536,8 @@ function tick(now) {
   }
   optWas = input.options;
 
-  hud.textContent = hudText();
+  hud.classList.toggle("up", playing && stickDebug);
+  paintHud(now);
 
   const alpha = playing ? acc / FIXED_DT : 1;
   poseAt(board, alpha, _pos, _quat);
