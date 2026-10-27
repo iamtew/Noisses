@@ -56,6 +56,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
 
   board.prevPos.copy(board.pos);
   board.prevQuat.copy(board.quat);
+  unhingeManual(board);
 
   const speed = Math.hypot(board.vel.x, board.vel.z);
   const airborne = !board.grounded;
@@ -84,8 +85,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   // Back 6 o'clock lifts the nose. Front 12 o'clock presses it.
   // Powerslide holds both ends, so the deck stays flat once the slide is locked.
   let pitchTarget = board.sliding ? 0 : stancePitch(front.y, back.y);
-  if (board.manual === "tail") pitchTarget = -(MANUAL_PITCH + board.balance * 0.12);
-  if (board.manual === "nose") pitchTarget = MANUAL_PITCH + board.balance * 0.12;
+  if (board.manual) pitchTarget = lockedManualPitch(board.manual, board.balance);
   const pitchRate = airborne ? PITCH_FOLLOW * 0.25 : PITCH_FOLLOW;
   if (!fell) board.pitch += (pitchTarget - board.pitch) * (1 - Math.exp(-pitchRate * dt));
 
@@ -108,6 +108,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   }
   _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
+  hingeManual(board);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
   _euler.set(board.pitch, board.yaw, board.roll);
   _ride.set(0, 0, 1).applyEuler(_euler);
@@ -360,6 +361,34 @@ function yawVel(vel, dYaw) {
   if (dYaw) vel.applyAxisAngle(UP, dYaw);
 }
 
+/** Tail = nose up. YXZ positive X drops +Z, so tail is the negative of the lean. */
+function lockedManualPitch(kind, balance) {
+  const lean = MANUAL_PITCH + (balance || 0) * 0.12;
+  return kind === "tail" ? -lean : lean;
+}
+
+function plantedTruckZ(board) {
+  if (board.manual === "tail") return TRUCK_LOCAL[1].z;
+  if (board.manual === "nose") return TRUCK_LOCAL[0].z;
+  return 0;
+}
+
+function truckLiftY(quat, z) {
+  _truck.set(0, 0, z).applyQuaternion(quat);
+  return _truck.y;
+}
+
+/** Rotate about the planted axle, not the deck center. Undo before the next pitch. */
+function unhingeManual(board) {
+  const z = plantedTruckZ(board);
+  if (z) board.pos.y += truckLiftY(board.quat, z);
+}
+
+function hingeManual(board) {
+  const z = plantedTruckZ(board);
+  if (z) board.pos.y -= truckLiftY(board.quat, z);
+}
+
 /**
  * Nose-down pitch (rad) from the feet. 12 o'clock = nose, 6 o'clock = tail.
  * Back 6 lifts the nose. Front 12 drops it. Split 12+6 is flat.
@@ -382,6 +411,14 @@ export function selfCheck() {
   const nollie = stancePitch(-0.8, 0);
   if (!(ollie < 0 && nollie === -ollie)) throw new Error("nollie pitch should invert the ollie");
   if (stancePitch(-0.8, 0.8) !== 0) throw new Error("front 12 and back 6 should stay flat");
+  _euler.set(lockedManualPitch("tail"), 0, 0);
+  const nose = new THREE.Vector3(0, 0, 1).applyEuler(_euler);
+  const tail = new THREE.Vector3(0, 0, -1).applyEuler(_euler);
+  if (!(nose.y > tail.y)) throw new Error("tail-manual pitch should raise the nose");
+  _euler.set(lockedManualPitch("nose"), 0, 0);
+  nose.set(0, 0, 1).applyEuler(_euler);
+  tail.set(0, 0, -1).applyEuler(_euler);
+  if (!(tail.y > nose.y)) throw new Error("nose-manual pitch should raise the tail");
   const carve = new THREE.Vector3(0, 0, 2);
   yawVel(carve, Math.PI / 2);
   if (Math.abs(carve.x - 2) > 0.01 || Math.abs(carve.z) > 0.01) {
