@@ -389,7 +389,8 @@ function tick(now) {
     if (input.pushRight && !menuCross) pause.confirm();
     menuCross = input.pushRight;
     walker.jumpArm = 0;
-    pause.tick(frameDt);
+    const stickY = Math.abs(input.ly) >= Math.abs(input.ry) ? input.ly : input.ry;
+    pause.tick(frameDt, stickY);
     sfx.tick(0, false, false, 0);
     acc = 0;
     board.prevPos.copy(board.pos);

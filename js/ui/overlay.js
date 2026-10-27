@@ -1,4 +1,5 @@
 import iro from "@jaames/iro";
+import { MENU_SCROLL } from "../constants.js";
 import {
   HOODIE_PATTERNS,
   loadHoodie,
@@ -57,8 +58,8 @@ const TITLES = {
 const HINTS = {
   root: "↑↓ select · × confirm · ○ or Options closes · hold Options for advanced",
   hoodie: "↑↓ select · ←→ pattern or hue · ○ back",
-  howto: "↑↓ select · × open · ○ back",
-  tricks: "↑↓ pick a trick · ○ back · paths are Regular (Goofy swaps the sticks)",
+  howto: "↑↓ select · sticks scroll · × open · ○ back",
+  tricks: "↑↓ pick a trick · sticks scroll · ○ back · paths are Regular (Goofy swaps the sticks)",
 };
 
 function patternLabel(id) {
@@ -255,6 +256,10 @@ export function bindPause(root, hooks) {
       btn.classList.toggle("on", open && screen === "tricks" && i === trickIndex),
     );
     trickBack.classList.toggle("on", open && screen === "tricks" && trickIndex === TRICKS.length);
+    if (open && screen === "tricks") {
+      const row = trickIndex < TRICKS.length ? trickBtns[trickIndex] : trickBack;
+      row.scrollIntoView({ block: "nearest" });
+    }
     const trick = TRICKS[Math.min(trickIndex, TRICKS.length - 1)];
     trickBlurb.textContent = trick.blurb;
     if (!(open && screen === "tricks")) {
@@ -333,8 +338,13 @@ export function bindPause(root, hooks) {
         else go("root");
       } else if (trickIndex === TRICKS.length) go("howto");
     },
-    tick(dt) {
-      if (!open || screen !== "tricks") return;
+    tick(dt, ly = 0) {
+      if (!open) return;
+      if (screen === "howto" || screen === "tricks") {
+        const pane = screen === "howto" ? howtoBody : trickList;
+        pane.scrollTop += ly * MENU_SCROLL * dt;
+      }
+      if (screen !== "tricks") return;
       if (trickIndex >= TRICKS.length) {
         demo.set({ lx: 0, ly: 0, rx: 0, ry: 0 }, true, true);
         return;

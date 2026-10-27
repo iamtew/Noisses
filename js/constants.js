@@ -110,6 +110,9 @@ export const SPAWN_HOLD = 0.8;
 /** Options must be held this long to open settings (s). A tap does not open it. */
 export const MENU_HOLD = 0.55;
 
+/** How-to / trick list stick scroll (px/s at full stick). Down-positive, same as the pad. */
+export const MENU_SCROLL = 520;
+
 /** Master gain for synthesized skate bed. */
 export let AUDIO_MASTER = 0.38;
 

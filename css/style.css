@@ -183,8 +183,16 @@ body {
 }
 
 #pause [data-screen] {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  max-height: calc(100vh - 14rem);
+}
+
+#pause [data-screen="howto"],
+#pause [data-screen="tricks"] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 #pause [data-screen][hidden],
@@ -205,8 +213,9 @@ body {
 }
 
 #pause .howto {
+  flex: 1;
+  min-height: 0;
   margin: 0 0 0.9rem;
-  max-height: min(46vh, 26rem);
   overflow: auto;
   white-space: pre-line;
   line-height: 1.5;
@@ -217,13 +226,15 @@ body {
 
 #pause .tricks {
   display: grid;
+  flex: 1;
+  min-height: 0;
   grid-template-columns: minmax(12rem, 16rem) minmax(14rem, 1fr);
   gap: 1.2rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 #pause [data-trick-list] {
-  max-height: min(52vh, 28rem);
+  min-height: 0;
   overflow: auto;
 }
 
