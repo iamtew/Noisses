@@ -18,6 +18,27 @@ body {
   height: 100%;
 }
 
+#clanker-chip {
+  display: none;
+  position: fixed;
+  left: 0.9rem;
+  top: 0.9rem;
+  z-index: 5;
+  margin: 0;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid #f4d35e;
+  background: rgba(12, 14, 16, 0.72);
+  color: #f4d35e;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  pointer-events: none;
+}
+
+body.clanker #clanker-chip {
+  display: block;
+}
+
 #hud {
   position: fixed;
   right: 1.15rem;
@@ -60,6 +81,19 @@ body {
   bottom: 1rem;
   display: flex;
   gap: 0.75rem;
+}
+
+body.clanker #sticks {
+  z-index: 6;
+}
+
+body.clanker #sticks .pad {
+  cursor: grab;
+  touch-action: none;
+}
+
+body.clanker #sticks .pad:active {
+  cursor: grabbing;
 }
 
 #sticks[hidden] {

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
 import { CAM_OFFSET_STOCK, FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, getTune, persistSkyClock, selfCheckSky, selfCheckTune, setTune } from "./constants.js";
+import { CLANKER, bindClankerPads } from "./input/clanker.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -32,10 +33,13 @@ selfCheckTune();
 selfCheckSky();
 selfCheckHowto();
 
+if (CLANKER) document.body.classList.add("clanker");
+
 const canvas = document.getElementById("view");
 const overlay = bindOverlay(document.getElementById("gate"));
 const hud = document.getElementById("hud");
 const sticks = bindSticks(document.getElementById("sticks"));
+bindClankerPads(document.getElementById("sticks"));
 const { renderer, scene, camera, sun } = setupScene(canvas);
 const { ground, props, grinds, floors, solids } = createEnvironment();
 scene.add(ground);
@@ -117,7 +121,7 @@ const _carryPos = new THREE.Vector3();
 const _carryQuat = new THREE.Quaternion();
 
 let playing = false;
-let stickDebug = false;
+let stickDebug = CLANKER;
 let stickLatch = false;
 let lowCam = false;
 let r1Latch = false;
@@ -372,17 +376,23 @@ function tick(now) {
   last = now;
 
   const pad = pollValidGamepad();
-  if (!pad) {
+  if (!pad && !CLANKER) {
     playing = false;
     overlay.show("missing");
   } else if (!playing) {
-    overlay.show("press");
-    if (anyButtonPressed(pad)) {
+    if (CLANKER && !pad) {
       playing = true;
       sfx.resume();
+    } else {
+      overlay.show("press");
+      if (anyButtonPressed(pad)) {
+        playing = true;
+        sfx.resume();
+      }
     }
   }
   if (playing) overlay.hide();
+  if (CLANKER && playing) sfx.resume();
   hud.hidden = !playing || menusOpen();
 
   const input = playing ? readPlayInput(pad, board.regular, now) : IDLE_INPUT;

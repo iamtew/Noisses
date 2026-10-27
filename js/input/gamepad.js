@@ -3,6 +3,9 @@
 // L2/R2 are buttons 6/7 (analog triggers).
 
 import { STICK_DEADZONE } from "../constants.js";
+import { CLANKER, clankerRaw } from "./clanker.js";
+
+const FIXED_FALLBACK = 1 / 60;
 
 /** Standard mapping: × Cross, ○ Circle, □ Square, △ Triangle. */
 export const BTN = {
@@ -98,23 +101,7 @@ function axis(pad, i) {
   return Math.abs(v) < STICK_DEADZONE ? 0 : v;
 }
 
-/**
- * @param {Gamepad} pad
- * @param {boolean} regular Regular: left = front foot, right = back foot.
- * @param {number} now performance.now()
- */
-export function readPlayInput(pad, regular, now) {
-  if (!pad) {
-    prevFrontY = 0;
-    prevBackY = 0;
-    prevFrontX = 0;
-    prevBackX = 0;
-    return IDLE_INPUT;
-  }
-  const lx = axis(pad, 0);
-  const ly = axis(pad, 1);
-  const rx = axis(pad, 2);
-  const ry = axis(pad, 3);
+function fromSticks(lx, ly, rx, ry, buttons, regular, now) {
   const front = regular ? { x: lx, y: ly } : { x: rx, y: ry };
   const back = regular ? { x: rx, y: ry } : { x: lx, y: ly };
   const dt = prevTime ? Math.max(0.001, (now - prevTime) / 1000) : FIXED_FALLBACK;
@@ -129,19 +116,7 @@ export function readPlayInput(pad, regular, now) {
   prevTime = now;
   return {
     steer: (front.x + back.x) * 0.5,
-    // □ left face = left foot, × bottom/right of that pair = right foot.
-    pushLeft: held(pad, BTN.SQUARE),
-    pushRight: held(pad, BTN.CROSS),
-    triangle: held(pad, BTN.TRIANGLE),
-    circle: held(pad, BTN.CIRCLE),
-    dpadUp: held(pad, BTN.DUP),
-    dpadDown: held(pad, BTN.DDOWN),
-    dpadLeft: held(pad, BTN.DLEFT),
-    dpadRight: held(pad, BTN.DRIGHT),
-    options: held(pad, BTN.OPTIONS),
-    r1: held(pad, BTN.R1),
-    l3: held(pad, BTN.L3),
-    r3: held(pad, BTN.R3),
+    ...buttons,
     lx,
     ly,
     rx,
@@ -152,9 +127,49 @@ export function readPlayInput(pad, regular, now) {
     backYVel,
     frontXVel,
     backXVel,
-    l2: trigger(pad, BTN.L2),
-    r2: trigger(pad, BTN.R2),
   };
 }
 
-const FIXED_FALLBACK = 1 / 60;
+/**
+ * @param {Gamepad | null | undefined} pad
+ * @param {boolean} regular Regular: left = front foot, right = back foot.
+ * @param {number} now performance.now()
+ */
+export function readPlayInput(pad, regular, now) {
+  if (pad) {
+    return fromSticks(
+      axis(pad, 0),
+      axis(pad, 1),
+      axis(pad, 2),
+      axis(pad, 3),
+      {
+        // □ left face = left foot, × bottom/right of that pair = right foot.
+        pushLeft: held(pad, BTN.SQUARE),
+        pushRight: held(pad, BTN.CROSS),
+        triangle: held(pad, BTN.TRIANGLE),
+        circle: held(pad, BTN.CIRCLE),
+        dpadUp: held(pad, BTN.DUP),
+        dpadDown: held(pad, BTN.DDOWN),
+        dpadLeft: held(pad, BTN.DLEFT),
+        dpadRight: held(pad, BTN.DRIGHT),
+        options: held(pad, BTN.OPTIONS),
+        r1: held(pad, BTN.R1),
+        l3: held(pad, BTN.L3),
+        r3: held(pad, BTN.R3),
+        l2: trigger(pad, BTN.L2),
+        r2: trigger(pad, BTN.R2),
+      },
+      regular,
+      now,
+    );
+  }
+  if (CLANKER) {
+    const raw = clankerRaw();
+    return fromSticks(raw.lx, raw.ly, raw.rx, raw.ry, raw, regular, now);
+  }
+  prevFrontY = 0;
+  prevBackY = 0;
+  prevFrontX = 0;
+  prevBackX = 0;
+  return IDLE_INPUT;
+}
