@@ -12,5 +12,6 @@ Gamepad is mandatory. Keyboard/mouse is not skating.
 - Overlay copy: CONTROLLER REQUIRED / Connect a gamepad with two analog sticks / dual-stick foot-control / Keyboard is not supported for skating.
 - After a pad is seen, require “Press any button to start” before play.
 - Disconnect mid-session → pause physics, show overlay, resume only when reconnected.
+- Clanker debug bypass lives in `.cursor/rules/clanker.mdc`. Do not delete it while “enforcing” this gate.
 - Dual-stick feet: Regular (default) right stick = back foot; Goofy reverses. No stance change mid-air or on a grind (or it bails).
 - No magnetic snap to rails. Free-skate v1: no score, timer, or missions.

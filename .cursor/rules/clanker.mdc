@@ -1,0 +1,28 @@
+---
+description: Clanker debug bypass. Keyboard and mouse-drag sticks. Not Meat Bag play.
+alwaysApply: true
+---
+
+# Clanker debug
+
+Not skating. `?clanker=yes` or `?clanker=true` (case-insensitive) skips the pad gate, auto-starts, and maps keyboard plus mouse onto pad input. A real pad still wins when connected. Default URL stays pad-mandatory. Do not “fix” this away.
+
+Code: `js/input/clanker.js`. Chip: CLANKER MODE. Stick HUD on by default (Z+X toggles).
+
+Open **http://localhost:8000/?clanker=yes**.
+
+Drag the stick HUD for analog feet. Two pointers can hold both. Release snaps to center. Keys fill any stick you are not dragging.
+
+| Keys | Pad |
+|---|---|
+| WASD | left stick |
+| IJKL | right stick |
+| F / Space | □ / × |
+| E / Q | △ / ○ |
+| Escape | Options |
+| R | R1 |
+| U / O | L2 / R2 |
+| Arrows | d-pad |
+| Z + X | L3 + R3 |
+
+Usage notes: [AGENTS.md](../../AGENTS.md).

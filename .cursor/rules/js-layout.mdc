@@ -11,6 +11,7 @@ Follow `bootstrap.md` §8. Do not invent a parallel tree.
 ```
 js/main.js                 # rAF loop, pause when pad missing
 js/input/gamepad.js        # poll, two-stick check, disconnect
+js/input/clanker.js        # ?clanker=yes debug. Not the game.
 js/physics/board.js        # later
 js/physics/skater.js       # later
 js/physics/world.js        # later
