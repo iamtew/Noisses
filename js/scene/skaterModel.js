@@ -271,9 +271,17 @@ export function createSkater() {
   head.add(mouth);
   const armL = bentArm(hoodie, skin);
   const armR = bentArm(hoodie, skin);
-  armL.position.set(0.02, 0.28, 0.15);
-  armR.position.set(0.02, 0.28, -0.15);
-  chest.add(torso, hood, head, armL, armR);
+  const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 10), hoodie);
+  const shoulderR = shoulderL.clone();
+  shoulderL.position.set(0.02, 0.278, 0.125);
+  shoulderR.position.set(0.02, 0.278, -0.125);
+  shoulderL.scale.set(1.1, 0.78, 1.28);
+  shoulderR.scale.set(1.1, 0.78, 1.28);
+  shoulderL.castShadow = true;
+  shoulderR.castShadow = true;
+  armL.position.set(0.02, 0.268, 0.132);
+  armR.position.set(0.02, 0.268, -0.132);
+  chest.add(torso, hood, head, shoulderL, shoulderR, armL, armR);
 
   // Pants. Sits in the crook: top at the hoodie hem, underside in the thigh.
   const butt = new THREE.Group();
@@ -300,6 +308,8 @@ export function createSkater() {
     chest,
     armL,
     armR,
+    shoulderL,
+    shoulderR,
     frontUpper,
     frontLower,
     backUpper,
@@ -576,6 +586,7 @@ export function selfCheckSkater() {
     pushRight: false,
   };
   poseSkater(skater, model, input, board, 0.016);
+  if (!skater.shoulderL || !skater.shoulderR) throw new Error("skater forgot the shoulders");
   if (!(skater.chest.position.y > 0.35)) throw new Error("skater hip is on the deck");
   if (!Number.isFinite(skater.frontUpper.quaternion.w)) throw new Error("skater leg");
   const restY = skater.armL.rotation.y;
