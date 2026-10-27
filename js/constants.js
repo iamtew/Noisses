@@ -294,8 +294,8 @@ const TUNE_BASE = {
 export const TUNABLES = [
   // 20% is a lazy hang. 220% is a short hop. 100% is the stock drop.
   { id: "gravity", label: "Gravity", min: 0.2, max: 2.2 },
-  // 1/60 = real time. 1 = 1h in 1m. 12 = 1h in 5s.
-  { id: "timeScale", label: "Time scale", min: 1 / 60, max: 12 },
+  // 1/60 = real time. 1 = 1h in 1m. 120 = 1h in 0.5s.
+  { id: "timeScale", label: "Time scale", min: 1 / 60, max: 120 },
   { id: "pop", label: "Pop height", min: 0.55, max: 1.75 },
   { id: "flip", label: "Flip speed", min: 0.45, max: 1.8 },
   { id: "shuv", label: "Shuv speed", min: 0.45, max: 1.8 },
@@ -480,6 +480,7 @@ export function formatTimeScale(mult) {
     return `1h = ${Math.round(mins)}m`;
   }
   if (Math.abs(sec - 5) < 0.2) return "1h = 5s";
+  if (Math.abs(sec - 0.5) < 0.05) return "1h = 0.5s";
   return `1h = ${sec < 10 ? sec.toFixed(1) : Math.round(sec)}s`;
 }
 
@@ -499,12 +500,13 @@ export function selfCheckTune() {
   setTune("gravity", 99, false);
   if (tune.gravity !== 2.2) throw new Error("tune gravity");
   if (Math.abs(GRAVITY - TUNE_BASE.gravity * 2.2) > 0.01) throw new Error("tune gravity publish");
-  setTune("timeScale", 99, false);
-  if (tune.timeScale !== 12) throw new Error("tune timeScale");
-  if (Math.abs(TIME_SCALE - 720) > 0.01) throw new Error("tune timeScale publish");
+  setTune("timeScale", 999, false);
+  if (tune.timeScale !== 120) throw new Error("tune timeScale");
+  if (Math.abs(TIME_SCALE - 7200) > 0.01) throw new Error("tune timeScale publish");
   if (formatTimeScale(1) !== "1h = 1m") throw new Error("tune timeScale label");
   if (formatTimeScale(1 / 60) !== "1h = 1h") throw new Error("tune timeScale realtime");
-  if (formatTimeScale(12) !== "1h = 5s") throw new Error("tune timeScale max");
+  if (formatTimeScale(12) !== "1h = 5s") throw new Error("tune timeScale 5s");
+  if (formatTimeScale(120) !== "1h = 0.5s") throw new Error("tune timeScale max");
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
 }
 
