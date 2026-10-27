@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { BUTT_DAMP, BUTT_KICK, BUTT_STIFF, DUMPTRUCK } from "../constants.js";
+import { BUTT_DAMP, BUTT_KICK, BUTT_STIFF, DUMPTRUCK, FOOT_X, FOOT_Z, TRUCK_LOCAL, WALK_SPEED } from "../constants.js";
+import { carryEase } from "../physics/skater.js";
 
 // ponytail: posed meshes, not a ragdoll. Constraints if a bail should leave the board.
 
@@ -10,6 +11,14 @@ const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
 const _ankle = new THREE.Vector3();
 const _euler = new THREE.Euler(0, 0, 0, "YXZ");
+const _rootQ = new THREE.Quaternion();
+const _truck = new THREE.Vector3();
+const _left = new THREE.Vector3();
+const _bx = new THREE.Vector3();
+const _by = new THREE.Vector3();
+const _bz = new THREE.Vector3();
+const _basis = new THREE.Matrix4();
+const _facePole = new THREE.Vector3();
 
 const THIGH = 0.26;
 const SHIN = 0.25;
@@ -168,12 +177,37 @@ function bentArm(cloth, skin) {
   hand.castShadow = true;
   fore.add(hand);
   g.add(upper, fore);
+  g.hand = hand;
   return g;
 }
 
 function hung(radius, length, mat) {
   const geo = new THREE.CylinderGeometry(radius, radius * 0.85, length, 14);
   geo.translate(0, -length / 2, 0);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  return mesh;
+}
+
+/** Lathe UVs smear the hoodie. Cylinder wrap, V by height, same as the arms. */
+function hoodieTorso(radius, length, mat) {
+  const geo = new THREE.CapsuleGeometry(radius, length, 8, 16);
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  const h = length + 2 * radius;
+  const y0 = -h / 2;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const s = 1 - ((y - y0) / h) * 0.22;
+    pos.setX(i, x * s);
+    pos.setZ(i, z * s);
+    uv.setXY(i, Math.atan2(x, z) / (Math.PI * 2) + 0.5, (y - y0) / h);
+  }
+  pos.needsUpdate = true;
+  uv.needsUpdate = true;
+  geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   return mesh;
@@ -210,9 +244,8 @@ export function createSkater() {
   const skin = new THREE.MeshStandardMaterial({ color: 0xc4926e, roughness: 0.65 });
 
   const chest = new THREE.Group();
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.2, 6, 16), hoodie);
+  const torso = hoodieTorso(0.105, 0.2, hoodie);
   torso.position.y = 0.2;
-  torso.castShadow = true;
   const hood = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16), hoodie);
   hood.scale.set(0.95, 1.05, 1.12);
   hood.position.set(-0.02, 0.4, 0);
@@ -255,9 +288,9 @@ export function createSkater() {
   chest.add(butt);
 
   // Hip is thick so the thigh meets the seat, then it thins toward the knee.
-  const frontUpper = limb(0.074, 0.034, pants);
+  const frontUpper = limb(0.055, 0.034, pants);
   const frontLower = limb(0.034, 0.026, pants);
-  const backUpper = limb(0.074, 0.034, pants);
+  const backUpper = limb(0.055, 0.034, pants);
   const backLower = limb(0.034, 0.026, pants);
   body.add(chest, frontUpper, frontLower, backUpper, backLower);
 
@@ -286,19 +319,24 @@ export function createSkater() {
     jigVZ: 0,
     prevVy: 0,
     prevSp: 0,
+    hand: armL.hand,
+    idle: 0,
+    step: 0,
+    gait: 0,
   };
   setHoodie(skater, loadHoodie());
   return skater;
 }
 
-/** Knee pokes toward the toes so the shin meets the shoe. */
-function leg(upper, lower, hip, ankle, side) {
+/** Knee pokes toward the toes. `pole` is the bend direction; on the board that is sideways. */
+function leg(upper, lower, hip, ankle, side, pole) {
   _a.copy(ankle).sub(hip);
   const dist = Math.max(0.08, Math.min(_a.length(), THIGH + SHIN - 0.02));
   const along = (dist * dist + THIGH * THIGH - SHIN * SHIN) / (2 * dist);
   const height = Math.sqrt(Math.max(0, THIGH * THIGH - along * along));
   _knee.copy(hip).addScaledVector(_a, along / _a.length());
-  _pole.set(side, 0.35, 0);
+  if (pole) _pole.copy(pole);
+  else _pole.set(side, 0.35, 0);
   const proj = _pole.dot(_a) / _a.lengthSq();
   _pole.addScaledVector(_a, -proj);
   if (_pole.lengthSq() < 1e-8) _pole.set(side, 0, 0);
@@ -308,12 +346,73 @@ function leg(upper, lower, hip, ankle, side) {
   aim(lower, _knee, ankle);
 }
 
+function angLerp(a, b, t) {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+
+function jiggleButt(skater, speed, vy, dt) {
+  const h = Math.min(0.05, Math.max(0.001, dt));
+  const v = Number.isFinite(vy) ? vy : 0;
+  skater.jigVX += -(speed - skater.prevSp) * BUTT_KICK;
+  skater.jigVY += (v - skater.prevVy) * BUTT_KICK;
+  skater.jigVY += Math.sin(skater.floss * 2) * skater.flossAmp * 1.4 * h;
+  skater.jigVZ += Math.cos(skater.floss) * skater.flossAmp * 1.1 * h;
+  skater.prevVy = v;
+  skater.prevSp = speed;
+  const pull = BUTT_STIFF * h;
+  skater.jigVX += -skater.jigX * pull;
+  skater.jigVY += -skater.jigY * pull;
+  skater.jigVZ += -skater.jigZ * pull;
+  const damp = Math.exp(-BUTT_DAMP * h);
+  skater.jigVX *= damp;
+  skater.jigVY *= damp;
+  skater.jigVZ *= damp;
+  skater.jigX = Math.max(-0.07, Math.min(0.07, skater.jigX + skater.jigVX * h));
+  skater.jigY = Math.max(-0.06, Math.min(0.06, skater.jigY + skater.jigVY * h));
+  skater.jigZ = Math.max(-0.05, Math.min(0.05, skater.jigZ + skater.jigVZ * h));
+  skater.butt.position.set(skater.jigX, skater.jigY, skater.jigZ);
+  skater.butt.rotation.z = skater.jigX * 5;
+  const dump = DUMPTRUCK;
+  skater.butt.scale.set(dump, dump * (1 + skater.jigY * 6), dump);
+}
+
+/**
+ * Deck in the left hand. Bottom (local −Y) points out along the left arm.
+ * Left is chest +Z: armL lives there. Regular's chest yaw of π carries that to root −Z.
+ * Nose up, front truck in the palm.
+ */
+export function carryBoardWorld(skater, outPos, outQuat) {
+  skater.root.updateMatrixWorld(true);
+  skater.chest.getWorldQuaternion(_rootQ);
+  _left.set(0, 0, 1).applyQuaternion(_rootQ);
+  _by.copy(_left).multiplyScalar(-1);
+  _bz.set(0, 1, 0);
+  if (Math.abs(_by.dot(_bz)) > 0.99) _bz.set(0, 0, 1);
+  _bx.crossVectors(_by, _bz).normalize();
+  _bz.crossVectors(_bx, _by).normalize();
+  _by.normalize();
+  _basis.makeBasis(_bx, _by, _bz);
+  outQuat.setFromRotationMatrix(_basis);
+  skater.hand.getWorldPosition(outPos);
+  const truck = TRUCK_LOCAL[0];
+  _truck.set(truck.x, truck.y, truck.z).applyQuaternion(outQuat);
+  outPos.sub(_truck);
+}
+
 /**
  * Crouch with stick weight, kick the back foot on a push, flop on a bail.
  * Rolling = floss. Standing still is too dignified.
  * Feet are already placed on the deck.
+ * `loco.carry` > 0 is off the board: idle, floss, and the same butt spring.
  */
-export function poseSkater(skater, model, input, board, dt) {
+export function poseSkater(skater, model, input, board, dt, loco) {
+  if (loco && loco.carry > 0) {
+    poseOff(skater, model, input, board, dt, loco);
+    return;
+  }
   const pushing = (input.pushLeft || input.pushRight) && board.grounded ? 1 : 0;
   skater.kick += (pushing - skater.kick) * (1 - Math.exp(-12 * dt));
   if (skater.kick > 0.01) {
@@ -336,7 +435,10 @@ export function poseSkater(skater, model, input, board, dt) {
   const kickScale = 1 - skater.flossAmp * 0.55;
 
   skater.chest.position.y = hipY;
+  skater.chest.rotation.x = 0;
+  skater.chest.rotation.z = 0;
   skater.chest.rotation.y = (board.regular ? Math.PI : 0) + s * 0.5;
+  skater.body.rotation.x = 0;
   skater.body.rotation.y = -s * 0.28;
   skater.armL.rotation.z = 0.15 + s * 0.85;
   skater.armR.rotation.z = -0.15 + s * 0.85;
@@ -345,12 +447,12 @@ export function poseSkater(skater, model, input, board, dt) {
   skater.armL.rotation.y = -s * 1.15;
   skater.armR.rotation.y = -s * 1.15;
 
-  _hip.set(0, hipY, 0.06);
+  _hip.set(0, hipY, 0.03);
   _ankle.copy(model.frontFoot.position);
   _ankle.y += 0.04;
   leg(skater.frontUpper, skater.frontLower, _hip, _ankle, side);
 
-  _hip.set(0, hipY, -0.06);
+  _hip.set(0, hipY, -0.03);
   _ankle.copy(model.backFoot.position);
   _ankle.y += 0.04;
   leg(skater.backUpper, skater.backLower, _hip, _ankle, side);
@@ -358,38 +460,102 @@ export function poseSkater(skater, model, input, board, dt) {
   const flop = Math.min(1, (board.bailed || 0) / 1.2);
   skater.body.rotation.z = flop * side * 1.15;
   skater.body.position.y = -flop * 0.1;
-
-  // Cheeks lag the hips, then the spring claps them back.
-  const h = Math.min(0.05, Math.max(0.001, dt));
   const vy = board.vel && Number.isFinite(board.vel.y) ? board.vel.y : 0;
-  skater.jigVX += -(speed - skater.prevSp) * BUTT_KICK;
-  skater.jigVY += (vy - skater.prevVy) * BUTT_KICK;
-  skater.jigVY += Math.sin(skater.floss * 2) * skater.flossAmp * 1.4 * h;
-  skater.jigVZ += Math.cos(skater.floss) * skater.flossAmp * 1.1 * h;
-  skater.prevVy = vy;
-  skater.prevSp = speed;
-  const pull = BUTT_STIFF * h;
-  skater.jigVX += -skater.jigX * pull;
-  skater.jigVY += -skater.jigY * pull;
-  skater.jigVZ += -skater.jigZ * pull;
-  const damp = Math.exp(-BUTT_DAMP * h);
-  skater.jigVX *= damp;
-  skater.jigVY *= damp;
-  skater.jigVZ *= damp;
-  skater.jigX = Math.max(-0.07, Math.min(0.07, skater.jigX + skater.jigVX * h));
-  skater.jigY = Math.max(-0.06, Math.min(0.06, skater.jigY + skater.jigVY * h));
-  skater.jigZ = Math.max(-0.05, Math.min(0.05, skater.jigZ + skater.jigVZ * h));
-  skater.butt.position.set(skater.jigX, skater.jigY, skater.jigZ);
-  skater.butt.rotation.z = skater.jigX * 5;
-  const dump = DUMPTRUCK;
-  skater.butt.scale.set(dump, dump * (1 + skater.jigY * 6), dump);
+  jiggleButt(skater, speed, vy, dt);
+}
+
+/** Off the board. Idle when still, floss when the feet are moving. Left arm keeps the deck. */
+function poseOff(skater, model, input, board, dt, loco) {
+  const t = carryEase(loco.carry);
+  const vel = loco.vel || { x: 0, y: 0, z: 0 };
+  const speed = Math.hypot(vel.x || 0, vel.z || 0);
+  const moving = Boolean(loco.moving) && t > 0.65;
+  const want = moving ? Math.min(1, speed / WALK_SPEED) : 0;
+  skater.flossAmp += (want - skater.flossAmp) * (1 - Math.exp(-10 * dt));
+  if (moving) skater.floss += dt * ((loco.running ? 8 : 5) + speed * 0.8);
+  skater.idle += moving ? 0 : dt;
+  const s = Math.sin(skater.floss) * skater.flossAmp;
+  const breathe = moving ? 0 : Math.sin(skater.idle * 1.7);
+
+  const prevStep = skater.step;
+  if (moving) skater.step += dt * (loco.running ? 11 : 7.2);
+  if (moving && (Math.sin(prevStep) < 0) !== (Math.sin(skater.step) < 0)) skater.jigVY += 0.55;
+  skater.gait += ((moving ? 1 : 0) - skater.gait) * (1 - Math.exp(-8 * dt));
+
+  const swing = Math.cos(skater.step);
+  // Face is chest +X. Regular yaws that to root −X; goofy leaves it at +X.
+  // Left arm is chest +Z, which regular carries to root −Z.
+  const faceX = board.regular ? -1 : 1;
+  const leftZ = faceX;
+  const reach = THIGH + SHIN - 0.04;
+  const hipY = 0.06 + reach + breathe * 0.012;
+  const wide = 0.08;
+  const hipWide = 0.028;
+  const stepZ = swing * 0.14 * skater.gait;
+  const liftL = Math.max(0, Math.sin(skater.step)) * 0.05 * skater.gait;
+  const liftR = Math.max(0, -Math.sin(skater.step)) * 0.05 * skater.gait;
+  const offLx = (0.02 + stepZ) * faceX;
+  const offLz = wide * leftZ;
+  const offRx = (0.02 - stepZ) * faceX;
+  const offRz = -wide * leftZ;
+
+  const fx = (input.front ? input.front.x : 0) * FOOT_X;
+  const fz = 0.18 - (input.front ? input.front.y : 0) * FOOT_Z;
+  const bx = (input.back ? input.back.x : 0) * FOOT_X;
+  const bz = -0.18 - (input.back ? input.back.y : 0) * FOOT_Z;
+  model.frontFoot.position.set(fx + (offLx - fx) * t, 0.028 + (0.02 - 0.028) * t + liftL * t, fz + (offLz - fz) * t);
+  model.backFoot.position.set(bx + (offRx - bx) * t, 0.028 + (0.02 - 0.028) * t + liftR * t, bz + (offRz - bz) * t);
+
+  const crouch = Math.sin(t * Math.PI) * 0.06;
+  const rideChest = board.regular ? Math.PI : 0;
+  skater.chest.position.y = hipY - crouch * (1 - t) - (hipY - 0.46) * (1 - t);
+  skater.chest.rotation.x = 0;
+  skater.chest.rotation.z = breathe * 0.04 * t;
+  skater.chest.rotation.y = rideChest + (moving ? s * 0.35 : breathe * 0.05);
+  skater.body.rotation.x = 0;
+  skater.body.rotation.y = (moving ? -s * 0.28 : breathe * 0.04) * t;
+  skater.body.rotation.z = breathe * 0.05 * t;
+  skater.body.position.y = 0;
+
+  // Negative X rotation swings armL out toward chest +Z. Positive X crosses the body.
+  const holdX = -0.85 + (moving ? s * 0.1 : breathe * 0.03);
+  const holdY = moving ? -s * 0.3 : breathe * 0.02;
+  skater.armL.rotation.x = 0.35 + (holdX - 0.35) * t;
+  skater.armL.rotation.z = 0.15 + (0.28 - 0.15) * t;
+  skater.armL.rotation.y = holdY * t;
+  const flossZ = moving ? -0.15 + s * 0.85 : -0.2;
+  const flossX = moving ? 0.15 : 0.2 + breathe * 0.1;
+  const flossY = moving ? -s * 1.15 : breathe * 0.02;
+  skater.armR.rotation.x = 0.2 + (flossX - 0.2) * t;
+  skater.armR.rotation.z = -0.15 + (flossZ + 0.15) * t;
+  skater.armR.rotation.y = flossY * t;
+
+  _facePole.set(faceX, 0.45, 0);
+  _hip.set(0.02 * faceX, skater.chest.position.y, hipWide * leftZ);
+  _ankle.copy(model.frontFoot.position);
+  _ankle.y += 0.04;
+  leg(skater.frontUpper, skater.frontLower, _hip, _ankle, leftZ, _facePole);
+  _hip.set(0.02 * faceX, skater.chest.position.y, -hipWide * leftZ);
+  _ankle.copy(model.backFoot.position);
+  _ankle.y += 0.04;
+  leg(skater.backUpper, skater.backLower, _hip, _ankle, -leftZ, _facePole);
+
+  jiggleButt(skater, speed, vel.y || 0, dt);
 }
 
 /**
  * Yaw and pitch only. Flip and shuv stay on the deck.
  * While a flip is in the air, the body hangs above the board.
  */
-export function placeSkater(skater, pos, board) {
+export function placeSkater(skater, pos, board, loco) {
+  if (loco && loco.carry > 0) {
+    const t = carryEase(loco.carry);
+    skater.root.position.lerpVectors(pos, loco.pos, t);
+    const yaw = angLerp(board.yaw, loco.yaw, t);
+    _euler.set(board.pitch * (1 - t), yaw, board.roll * (1 - t));
+    skater.root.quaternion.setFromEuler(_euler);
+    return;
+  }
   skater.root.position.copy(pos);
   if (!board.grounded && !board.caught) skater.root.position.y += 0.22;
   _euler.set(board.pitch, board.yaw, board.roll);
@@ -442,6 +608,60 @@ export function selfCheckSkater() {
   if (!(Math.abs(skater.jigY) > 0.01)) throw new Error("butt ignored the pop");
   for (let i = 0; i < 200; i++) poseSkater(skater, model, input, board, 0.016);
   if (!(Math.abs(skater.jigY) < 0.005)) throw new Error("butt never settled");
+
+  const loco = { carry: 1, moving: false, running: false, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pos: new THREE.Vector3(1, 0, 3) };
+  board.grounded = true;
+  board.vel = { x: 0, y: 0, z: 0 };
+  board.yaw = 0.4;
+  for (let i = 0; i < 80; i++) poseSkater(skater, model, input, board, 0.016, loco);
+  if (!(Math.abs(skater.armL.rotation.y) < 0.05)) throw new Error("skater flossed while loitering");
+  if (!(Math.abs(skater.armR.rotation.y) < 0.05)) throw new Error("skater flossed while loitering");
+  if (!(skater.armL.rotation.x < -0.4)) throw new Error("left arm should hang out, not across the chest");
+  if (!(skater.chest.position.y > 0.48)) throw new Error("knees still folded");
+  let chestDelta = skater.chest.rotation.y - Math.PI;
+  while (chestDelta > Math.PI) chestDelta -= Math.PI * 2;
+  while (chestDelta < -Math.PI) chestDelta += Math.PI * 2;
+  if (Math.abs(chestDelta) > 0.2) throw new Error("regular stance spun off the board");
+  skater.root.position.set(0, 0, 0);
+  skater.root.quaternion.identity();
+  skater.root.updateMatrixWorld(true);
+  const leftHand = new THREE.Vector3();
+  skater.hand.getWorldPosition(leftHand);
+  if (!(leftHand.z < -0.08)) throw new Error("left hand is on the right");
+  loco.moving = true;
+  loco.running = false;
+  loco.vel.x = 3;
+  const armRest = skater.armR.rotation.y;
+  for (let i = 0; i < 40; i++) poseSkater(skater, model, input, board, 0.016, loco);
+  if (!(Math.abs(skater.armR.rotation.y - armRest) > 0.08)) throw new Error("skater should floss while walking");
+  loco.vel.y = 0;
+  skater.prevVy = 0;
+  poseSkater(skater, model, input, board, 0.016, loco);
+  loco.vel.y = 5;
+  for (let i = 0; i < 8; i++) poseSkater(skater, model, input, board, 0.016, loco);
+  if (!(Math.abs(skater.jigY) > 0.01)) throw new Error("butt ignored the walk");
+
+  skater.chest.rotation.set(0, Math.PI, 0);
+  skater.root.position.set(0, 0, 0);
+  skater.root.quaternion.identity();
+  skater.root.updateMatrixWorld(true);
+  const held = new THREE.Vector3();
+  const heldQ = new THREE.Quaternion();
+  carryBoardWorld(skater, held, heldQ);
+  const bottom = new THREE.Vector3(0, -1, 0).applyQuaternion(heldQ);
+  if (!(bottom.z < -0.9)) throw new Error("deck bottom should face out the left arm");
+  const nose = new THREE.Vector3(0, 0, 1).applyQuaternion(heldQ);
+  if (!(nose.y > 0.9)) throw new Error("nose should point up from the truck");
+  skater.chest.rotation.y = 0;
+  skater.root.updateMatrixWorld(true);
+  carryBoardWorld(skater, held, heldQ);
+  const bottomGoofy = new THREE.Vector3(0, -1, 0).applyQuaternion(heldQ);
+  if (!(bottomGoofy.z > 0.9)) throw new Error("goofy left is chest +Z");
+  const palm = new THREE.Vector3();
+  skater.hand.getWorldPosition(palm);
+  const truck = TRUCK_LOCAL[0];
+  const atHand = new THREE.Vector3(truck.x, truck.y, truck.z).applyQuaternion(heldQ).add(held);
+  if (atHand.distanceTo(palm) > 0.02) throw new Error("truck should sit in the hand");
 
   const dye = offsetHoodie("#2e6fbf");
   if (dye === "#2e6fbf") throw new Error("hoodie offset is a no-op");

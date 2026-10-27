@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { FIXED_DT, MENU_HOLD, SPAWN_HOLD, selfCheckTune } from "./constants.js";
+import { FIXED_DT, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, selfCheckTune } from "./constants.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -8,11 +8,12 @@ import {
   readPlayInput,
 } from "./input/gamepad.js";
 import { applySpawn, createBoardState, poseAt } from "./physics/board.js";
+import { carryBusy, createWalker, plantUnderFeet, selfCheckWalker, stepCarry, stepWalker } from "./physics/skater.js";
 import { selfCheck, stepWorld } from "./physics/world.js";
 import { createBoardModel, placeFeet } from "./scene/boardModel.js";
 import { createDust, createEnvironment, createSpawnMark } from "./scene/environment.js";
-import { followCamera, setupScene } from "./scene/setup.js";
-import { createSkater, placeSkater, poseSkater, selfCheckSkater, setHoodie } from "./scene/skaterModel.js";
+import { followCamera, orbitCamera, seedOrbit, setupScene } from "./scene/setup.js";
+import { carryBoardWorld, createSkater, placeSkater, poseSkater, selfCheckSkater, setHoodie } from "./scene/skaterModel.js";
 import { selfCheckHowto } from "./ui/howto.js";
 import { bindOverlay, bindPause } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
@@ -26,6 +27,7 @@ selfCheckManual();
 selfCheckSlide();
 selfCheckAudio();
 selfCheckSkater();
+selfCheckWalker();
 selfCheckTune();
 selfCheckHowto();
 
@@ -41,6 +43,15 @@ const dust = createDust();
 scene.add(dust.points);
 
 const board = createBoardState();
+const walker = createWalker();
+const loco = {
+  carry: 0,
+  moving: false,
+  running: false,
+  yaw: 0,
+  pos: walker.pos,
+  vel: walker.vel,
+};
 const model = createBoardModel();
 const skater = createSkater();
 skater.root.add(model.frontFoot, model.backFoot);
@@ -98,9 +109,12 @@ for (let i = 0; i < 240 && !board.grounded; i++) {
 
 const _pos = board.pos.clone();
 const _quat = board.quat.clone();
+const _carryPos = new THREE.Vector3();
+const _carryQuat = new THREE.Quaternion();
 
 let playing = false;
 let stickDebug = false;
+let stickLatch = false;
 let lowCam = false;
 let r1Latch = false;
 let camFlash = 0;
@@ -130,9 +144,10 @@ function settleBoard() {
 }
 
 function setSpawnHere() {
-  spawnAt.x = board.pos.x;
-  spawnAt.z = board.pos.z;
-  spawnAt.yaw = board.yaw;
+  const feet = walker.carry > 0 ? walker.pos : board.pos;
+  spawnAt.x = feet.x;
+  spawnAt.z = feet.z;
+  spawnAt.yaw = walker.carry > 0 ? walker.yaw : board.yaw;
   plantMark();
   markPunch = 1;
   spawnMsg = "SPAWN SET";
@@ -141,6 +156,13 @@ function setSpawnHere() {
 }
 
 function respawnHere() {
+  walker.carry = 0;
+  walker.carryTo = 0;
+  walker.running = false;
+  walker.moving = false;
+  walker.jumpArm = 0;
+  walker.vel.set(0, 0, 0);
+  if (model.group.parent !== scene) scene.attach(model.group);
   applySpawn(board, spawnAt);
   settleBoard();
   spawnMsg = "RESPAWNED";
@@ -183,7 +205,8 @@ function paintCharge(dt) {
   if (chargingDown) {
     const t = Math.min(1, holdDown / SPAWN_HOLD);
     charge.visible = true;
-    charge.position.set(board.pos.x, floorY(board.pos.x, board.pos.z) + 0.04, board.pos.z);
+    const at = walker.carry > 0 ? walker.pos : board.pos;
+    charge.position.set(at.x, floorY(at.x, at.z) + 0.04, at.z);
     charge.scale.setScalar(0.35 + t * 1.15);
     charge.material.opacity = 0.22 + t * 0.7;
     charge.material.color.setHex(0x7ec8ff);
@@ -208,8 +231,55 @@ function paintCharge(dt) {
   }
 }
 
+function placeDeck() {
+  const carry = walker.carry;
+  if (carry <= 0) {
+    if (model.group.parent !== scene) scene.attach(model.group);
+    model.group.position.copy(_pos);
+    model.group.quaternion.copy(_quat);
+    return;
+  }
+  carryBoardWorld(skater, _carryPos, _carryQuat);
+  const ease = carry * carry * (3 - 2 * carry);
+  if (carry >= 1 && model.group.parent === skater.hand) return;
+  if (model.group.parent === skater.hand) scene.attach(model.group);
+  model.group.position.lerpVectors(_pos, _carryPos, ease);
+  model.group.quaternion.copy(_quat).slerp(_carryQuat, ease);
+  model.group.scale.set(1, 1, 1);
+  if (carry >= 1) skater.hand.attach(model.group);
+}
+
 function menusOpen() {
   return pause.isOpen() || menu.isOpen();
+}
+
+function onBoard() {
+  return walker.carry <= 0 && walker.carryTo <= 0;
+}
+
+function beginDismount() {
+  const yaw = board.yaw;
+  const side = board.regular ? -1 : 1;
+  walker.pos.set(
+    board.pos.x + Math.sin(yaw) * 0.32 * side,
+    0,
+    board.pos.z + Math.cos(yaw) * 0.32 * side,
+  );
+  walker.pos.y = floorY(walker.pos.x, walker.pos.z);
+  walker.yaw = yaw;
+  walker.vel.set(0, 0, 0);
+  walker.running = false;
+  walker.moving = false;
+  walker.grounded = true;
+  walker.jumpArm = 0;
+  walker.carryTo = 1;
+  seedOrbit(walker, camera, board.pos);
+}
+
+function beginMount() {
+  if (model.group.parent !== scene) scene.attach(model.group);
+  plantUnderFeet(board, walker, floorY(walker.pos.x, walker.pos.z) + RIDE_HEIGHT);
+  walker.carryTo = 0;
 }
 
 function closeAdvanced() {
@@ -223,6 +293,13 @@ function hudText() {
   if (holdDown > 0 && !firedDown) return `SET SPAWN  ${Math.min(99, Math.floor((holdDown / SPAWN_HOLD) * 100))}%`;
   if (holdUp > 0 && !firedUp) return `RESPAWN  ${Math.min(99, Math.floor((holdUp / SPAWN_HOLD) * 100))}%`;
   if (spawnFlash > 0) return spawnMsg;
+  if (walker.carryTo > walker.carry) return "GETTING OFF";
+  if (walker.carryTo < walker.carry) return "GETTING ON";
+  if (walker.carry >= 1) {
+    if (walker.running) return "running";
+    if (walker.moving) return "walking";
+    return "loitering";
+  }
   if (camFlash > 0) return lowCam ? "LOW CAM" : "FOLLOW";
   if (board.bailed > 0) return "BAILED";
   const stance = board.regular ? "regular" : "goofy";
@@ -254,7 +331,7 @@ function tick(now) {
     }
   }
   if (playing) overlay.hide();
-  hud.hidden = !playing;
+  hud.hidden = !playing || menusOpen();
 
   const input = playing ? readPlayInput(pad, board.regular, now) : IDLE_INPUT;
   if (!playing) {
@@ -292,6 +369,7 @@ function tick(now) {
     if (dir) menu.nudge(dir, frameDt);
     if (input.pushRight && !menuCross) menu.confirm();
     menuCross = input.pushRight;
+    walker.jumpArm = 0;
     sfx.tick(0, false, false, 0);
     acc = 0;
     board.prevPos.copy(board.pos);
@@ -310,21 +388,29 @@ function tick(now) {
     menuRight = input.dpadRight;
     if (input.pushRight && !menuCross) pause.confirm();
     menuCross = input.pushRight;
+    walker.jumpArm = 0;
     pause.tick(frameDt);
     sfx.tick(0, false, false, 0);
     acc = 0;
     board.prevPos.copy(board.pos);
     board.prevQuat.copy(board.quat);
   } else if (playing) {
-    if (input.triangle && !board.triangleLatch) stickDebug = !stickDebug;
+    const bothSticks = input.l3 && input.r3;
+    if (bothSticks && !stickLatch) stickDebug = !stickDebug;
+    stickLatch = bothSticks;
+    if (input.triangle && !board.triangleLatch && !carryBusy(walker)) {
+      if (walker.carryTo < 0.5) {
+        if (board.grounded && !board.grinding && !(board.bailed > 0)) beginDismount();
+      } else beginMount();
+    }
     board.triangleLatch = input.triangle;
-    if (input.r1 && !r1Latch) {
+    if (onBoard() && input.r1 && !r1Latch) {
       lowCam = !lowCam;
       camFlash = 1.2;
     }
     r1Latch = input.r1;
     if (camFlash > 0) camFlash = Math.max(0, camFlash - frameDt);
-    if (input.circle && !board.circleLatch) {
+    if (onBoard() && input.circle && !board.circleLatch) {
       if (board.grinding) {
         board.grinding = false;
         board.grind = null;
@@ -340,30 +426,53 @@ function tick(now) {
     paintCharge(frameDt);
 
     acc += frameDt;
-    while (acc >= FIXED_DT) {
-      const wasGrounded = board.grounded;
-      const wasBailed = board.bailed;
-      const wasSliding = board.sliding;
-      const vy = board.vel.y;
-      const willPush =
-        board.grounded &&
-        ((input.pushLeft && !board.pushLeftLatch) ||
-          (input.pushRight && !board.pushRightLatch));
-      stepWorld(board, FIXED_DT, input, floors, grinds, solids);
-      if (willPush || (board.sliding && !wasSliding)) {
-        sfx.push();
-        dust.burst(board.pos, 0.7);
+    if (onBoard()) {
+      while (acc >= FIXED_DT) {
+        const wasGrounded = board.grounded;
+        const wasBailed = board.bailed;
+        const wasSliding = board.sliding;
+        const vy = board.vel.y;
+        const willPush =
+          board.grounded &&
+          ((input.pushLeft && !board.pushLeftLatch) ||
+            (input.pushRight && !board.pushRightLatch));
+        stepWorld(board, FIXED_DT, input, floors, grinds, solids);
+        if (willPush || (board.sliding && !wasSliding)) {
+          sfx.push();
+          dust.burst(board.pos, 0.7);
+        }
+        if (!board.grounded && wasGrounded && board.vel.y > 0.35) sfx.pop();
+        if (board.grounded && !wasGrounded) {
+          if (board.bailed > 0 && wasBailed <= 0) sfx.bail();
+          else sfx.land(-vy);
+          dust.burst(board.pos, 0.5 + Math.min(1.2, Math.abs(vy) * 0.25));
+        }
+        acc -= FIXED_DT;
       }
-      if (!board.grounded && wasGrounded && board.vel.y > 0.35) sfx.pop();
-      if (board.grounded && !wasGrounded) {
-        if (board.bailed > 0 && wasBailed <= 0) sfx.bail();
-        else sfx.land(-vy);
-        dust.burst(board.pos, 0.5 + Math.min(1.2, Math.abs(vy) * 0.25));
+      const speed = Math.hypot(board.vel.x, board.vel.z);
+      sfx.tick(speed, board.grounded, board.grinding, board.flipRate);
+    } else {
+      board.prevPos.copy(board.pos);
+      board.prevQuat.copy(board.quat);
+      let jumped = false;
+      let landed = false;
+      let impact = 0;
+      while (acc >= FIXED_DT) {
+        stepCarry(walker, FIXED_DT);
+        if (walker.carry >= 1 && walker.carryTo >= 1) {
+          const step = stepWalker(walker, input, FIXED_DT, floorY, solids, board.regular);
+          if (step.jumped) jumped = true;
+          if (step.landed) {
+            landed = true;
+            impact = step.impact;
+          }
+        }
+        acc -= FIXED_DT;
       }
-      acc -= FIXED_DT;
+      if (jumped) sfx.pop();
+      if (landed) sfx.land(impact);
+      sfx.tick(0, false, false, 0);
     }
-    const speed = Math.hypot(board.vel.x, board.vel.z);
-    sfx.tick(speed, board.grounded, board.grinding, board.flipRate);
   } else {
     sfx.tick(0, false, false, 0);
     acc = 0;
@@ -380,21 +489,37 @@ function tick(now) {
   poseAt(board, alpha, _pos, _quat);
   const setT = holdDown > 0 && !firedDown ? Math.min(1, holdDown / SPAWN_HOLD) : 0;
   const upT = holdUp > 0 && !firedUp ? Math.min(1, holdUp / SPAWN_HOLD) : 0;
-  if (setT > 0) _pos.y += 0.05 * setT;
-  if (upT > 0) _pos.y += 0.1 * upT;
-  model.group.position.copy(_pos);
-  model.group.quaternion.copy(_quat);
-  const squash = 1 + (setT + upT) * 0.04;
-  model.group.scale.set(squash, 1 - (setT + upT) * 0.06, squash);
-  placeFeet(model, input.front, input.back);
-  poseSkater(skater, model, input, board, frameDt);
-  placeSkater(skater, _pos, board);
+  if (walker.carry <= 0) {
+    if (setT > 0) _pos.y += 0.05 * setT;
+    if (upT > 0) _pos.y += 0.1 * upT;
+  }
+  loco.carry = walker.carry;
+  loco.moving = walker.moving;
+  loco.running = walker.running;
+  loco.yaw = walker.yaw;
+  if (walker.carry <= 0) placeFeet(model, input.front, input.back);
+  poseSkater(skater, model, input, board, frameDt, loco);
+  placeSkater(skater, _pos, board, loco);
+  placeDeck();
+  if (walker.carry <= 0) {
+    const squash = 1 + (setT + upT) * 0.04;
+    model.group.scale.set(squash, 1 - (setT + upT) * 0.06, squash);
+  }
   for (const wheel of model.wheels) wheel.rotation.x = board.wheelSpin;
 
   sticks.set(input, board.regular, playing && stickDebug);
   dust.step(frameDt);
-  // Rider heading, not the deck. Shuv/flip on board.quat would orbit the camera and make the body look like it counter-spins.
-  followCamera(camera, _pos, skater.root.quaternion, frameDt, sun, lowCam);
+  if (playing && !menusOpen() && walker.carry > 0) {
+    walker.camYaw -= input.rx * ORBIT_YAW * frameDt;
+    const pitch = walker.camPitch + input.ry * ORBIT_PITCH * frameDt;
+    walker.camPitch = Math.min(ORBIT_PITCH_MAX, Math.max(ORBIT_PITCH_MIN, pitch));
+  }
+  // On the board, follow the rider. Off it, the right stick swings the orbit.
+  if (walker.carry > 0) {
+    orbitCamera(camera, skater.root.position, walker.camYaw, walker.camPitch, frameDt, sun);
+  } else {
+    followCamera(camera, _pos, skater.root.quaternion, frameDt, sun, lowCam);
+  }
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }

@@ -238,7 +238,7 @@ function bumpGrindBody(board, grind) {
   }
 }
 
-function resolveSolids(board, solids) {
+export function resolveSolids(board, solids) {
   const y = board.pos.y;
   for (const b of solids) {
     if (y > b.max.y - 0.01) continue;
@@ -330,12 +330,13 @@ export function stancePitch(frontY, backY) {
   return (frontY - backY) * 0.5 * PITCH_MAX;
 }
 
-/** Fails loud if gravity integration is broken. */
+/** Fails loud if gravity integration is broken. Fixed 9.81, not the slider. */
 export function selfCheck() {
+  const g = 9.81;
   let y = 2;
   let v = 0;
   for (let t = 0; t < 1; t += FIXED_DT) {
-    v -= GRAVITY * FIXED_DT;
+    v -= g * FIXED_DT;
     y += v * FIXED_DT;
   }
   if (!(y < 0)) throw new Error("gravity self-check failed");

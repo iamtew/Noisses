@@ -6,8 +6,8 @@ export const STICK_DEADZONE = 0.12;
 /** Physics tick. Render interpolates; rAF is the frame. */
 export const FIXED_DT = 1 / 120;
 
-/** Downward accel (m/s²). Earth-ish; feels heavy on a light board. */
-export const GRAVITY = 9.81;
+/** Downward accel (m/s²). Earth-ish; the advanced slider multiplies this. */
+export let GRAVITY = 9.81;
 
 /** Board + skater lump mass (kg). Heavy on purpose. */
 export const BOARD_MASS = 75;
@@ -85,6 +85,24 @@ export const CAM_LOW_BACK = 1.45;
 export const CAM_LOW_SIDE = 0;
 export const CAM_LOW_HEIGHT = 0.34;
 export const CAM_LOW_LOOK = 0.16;
+
+/** Off the board. Right stick orbits. Left stick walks. */
+export const WALK_SPEED = 2.2;
+export const RUN_SPEED = 5.5;
+/** Upward speed on a walk jump (m/s). Same gravity as the board. */
+export const WALK_JUMP = 4.2;
+/** Second Cross inside this window runs instead of jumping (s). */
+export const RUN_TAP = 0.22;
+/** Get on / get off (s). */
+export const CARRY_TIME = 0.45;
+/** Left stick orbit (rad/s at full deflection). */
+export const ORBIT_YAW = 2.4;
+export const ORBIT_PITCH = 1.6;
+export const ORBIT_PITCH_MIN = 0.08;
+export const ORBIT_PITCH_MAX = 1.15;
+/** Third-person distance and look height while walking (m). */
+export const WALK_CAM_DIST = 3.15;
+export const WALK_CAM_LOOK = 0.72;
 
 /** D-pad down/up must be held this long to set / respawn (s). Taps do nothing. */
 export const SPAWN_HOLD = 0.8;
@@ -227,7 +245,7 @@ export const GRIND_RIDE = 0.08;
 export let GRIND_FRICTION = 0.2;
 
 /** Cheek size multiplier. 1 is the stock seat. The advanced slider owns this. */
-export let DUMPTRUCK = 1;
+export let DUMPTRUCK = 0.8;
 
 /** Stock values. Sliders store a multiplier of these. 1 = as shipped. */
 const TUNE_BASE = {
@@ -239,11 +257,14 @@ const TUNE_BASE = {
   steer: 1.6,
   turn: 1.8,
   volume: 0.38,
-  dumptruck: 1,
+  dumptruck: 0.8,
+  gravity: 9.81,
 };
 
 export const TUNABLES = [
   { id: "pop", label: "Pop height", min: 0.55, max: 1.75 },
+  // 20% is a lazy hang. 220% is a short hop. 100% is the stock drop.
+  { id: "gravity", label: "Gravity", min: 0.2, max: 2.2 },
   { id: "flip", label: "Flip speed", min: 0.45, max: 1.8 },
   { id: "shuv", label: "Shuv speed", min: 0.45, max: 1.8 },
   { id: "grind", label: "Grind friction", min: 0.15, max: 3 },
@@ -251,7 +272,7 @@ export const TUNABLES = [
   { id: "steer", label: "Steer", min: 0.4, max: 1.8 },
   { id: "turn", label: "Trigger turn", min: 0.4, max: 1.8 },
   { id: "volume", label: "Volume", min: 0, max: 1.6 },
-  { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 2.4 },
+  { id: "dumptruck", label: "Dumptruck", min: 0.35, max: 3 },
 ];
 
 const TUNE_KEY = "noisses-tune";
@@ -272,6 +293,7 @@ function publishTune() {
   TRIGGER_YAW = TUNE_BASE.turn * tune.turn;
   AUDIO_MASTER = TUNE_BASE.volume * tune.volume;
   DUMPTRUCK = TUNE_BASE.dumptruck * tune.dumptruck;
+  GRAVITY = TUNE_BASE.gravity * tune.gravity;
 }
 
 export function getTune() {
@@ -322,6 +344,10 @@ export function selfCheckTune() {
   if (tune.pop !== 1.75) throw new Error("tune clamp");
   if (Math.abs(OLLIE_IMPULSE - TUNE_BASE.pop * 1.75) > 0.01) throw new Error("tune pop");
   setTune("dumptruck", 9, false);
-  if (DUMPTRUCK !== 2.4) throw new Error("tune dumptruck");
+  if (tune.dumptruck !== 3) throw new Error("tune dumptruck");
+  if (Math.abs(DUMPTRUCK - TUNE_BASE.dumptruck * 3) > 0.01) throw new Error("tune dumptruck publish");
+  setTune("gravity", 99, false);
+  if (tune.gravity !== 2.2) throw new Error("tune gravity");
+  if (Math.abs(GRAVITY - TUNE_BASE.gravity * 2.2) > 0.01) throw new Error("tune gravity publish");
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
 }

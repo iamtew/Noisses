@@ -6,8 +6,11 @@ export const HOWTO_BODY =
   "□ push left foot. × push right foot. Once per press, on the ground.\n" +
   "Stick Y is weight. Back foot down lifts the nose. Front foot down is the nollie crouch.\n" +
   "L2 / R2 turn. R1 low cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
-  "Ollie: hold the back stick down, flick the front stick up. Catch = both sticks home.\n" +
-  "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders. △ paints the sticks: left red, right purple.";
+  "Ollie: hold the back stick down, flick the front stick up. Catch is automatic near a full turn.\n" +
+  "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders.\n" +
+  "△ steps off the board. It lives in the left hand, graphic out, truck in the fist. △ again gets back on.\n" +
+  "Off the board the left stick walks, the right stick swings the camera, × jumps, and ×× runs.\n" +
+  "L3+R3 together paints the sticks: left red, right purple.";
 
 function k(t, lx, ly, rx, ry) {
   return { t, l: [lx, ly], r: [rx, ry] };
@@ -45,12 +48,12 @@ export const TRICKS = [
   },
   {
     name: "Kickflip",
-    blurb: "Ollie, then scoop the front stick right. Bring both sticks in to catch.",
+    blurb: "Ollie, then scoop the front stick right. Catch snaps itself near a full flip.",
     keys: ollieThen([k(0.7, 0.82, -0.15, 0, 0.35), k(0.95, 0.15, 0, 0, 0.1)], 1.35),
   },
   {
     name: "Heelflip",
-    blurb: "Ollie, scoop the front stick left. Catch is still both sticks in the hole.",
+    blurb: "Ollie, scoop the front stick left. Catch is automatic near a full flip.",
     keys: ollieThen([k(0.7, -0.82, -0.15, 0, 0.35), k(0.95, -0.15, 0, 0, 0.1)], 1.35),
   },
   {
@@ -65,12 +68,12 @@ export const TRICKS = [
   },
   {
     name: "Varial heelflip",
-    blurb: "Heelflip scoop plus a shuv. Same pop window. Then home to catch.",
+    blurb: "Heelflip scoop plus a shuv. Same pop window. Catch is still automatic.",
     keys: ollieThen([k(0.68, -0.82, -0.12, -0.82, 0.22), k(0.95, -0.2, 0, -0.2, 0)], 1.4),
   },
   {
     name: "Catch",
-    blurb: "After a flip or shuv, dump both sticks in the dead zone near a full turn.",
+    blurb: "No stick dump. When the flip or shuv is close to a full turn, it snaps level by itself.",
     keys: [
       k(0, 0.7, -0.2, 0.65, 0.2),
       k(0.35, 0.7, -0.2, 0.65, 0.2),

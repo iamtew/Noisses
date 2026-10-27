@@ -16,7 +16,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn     R1  low cam\nOptions  pause     hold Options  advanced\nEmbarcadero Plaza — face the bay\nFountain on your left · Ferry Building ahead, tower to the right\nLedge and kicker on your right · box and rails further out\n○ stance     △ sticks",
+    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn     R1  low cam\nOptions  pause     hold Options  advanced\nEmbarcadero Plaza — face the bay\nFountain on your left · Ferry Building ahead, tower to the right\nLedge and kicker on your right · box and rails further out\n○ stance on the board\n△ off / on the board     L3+R3 sticks\nOff the board: left stick walks, right stick looks, × jumps, ×× runs",
   },
 };
 

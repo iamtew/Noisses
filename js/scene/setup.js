@@ -9,6 +9,10 @@ import {
   CAM_LOW_LOOK,
   CAM_LOW_SIDE,
   CAM_SIDE,
+  ORBIT_PITCH_MAX,
+  ORBIT_PITCH_MIN,
+  WALK_CAM_DIST,
+  WALK_CAM_LOOK,
 } from "../constants.js";
 
 const _desired = new THREE.Vector3();
@@ -88,9 +92,36 @@ export function followCamera(camera, pos, quat, dt, sun, low) {
   _look.y += lookY;
   camera.lookAt(_look);
 
-  if (sun) {
-    sun.position.set(pos.x + 8, pos.y + 14, pos.z + 6);
-    sun.target.position.copy(pos);
-    sun.target.updateMatrixWorld();
-  }
+  parkSun(sun, pos);
+}
+
+function parkSun(sun, pos) {
+  if (!sun) return;
+  sun.position.set(pos.x + 8, pos.y + 14, pos.z + 6);
+  sun.target.position.copy(pos);
+  sun.target.updateMatrixWorld();
+}
+
+/** Match the orbit to wherever the follow cam already is, so a dismount does not snap. */
+export function seedOrbit(walker, camera, pos) {
+  const dx = camera.position.x - pos.x;
+  const dz = camera.position.z - pos.z;
+  const dy = camera.position.y - (pos.y + WALK_CAM_LOOK);
+  walker.camYaw = Math.atan2(dx, dz);
+  const pitch = Math.atan2(dy, Math.hypot(dx, dz) || 1);
+  walker.camPitch = Math.min(ORBIT_PITCH_MAX, Math.max(ORBIT_PITCH_MIN, pitch));
+}
+
+/** Right stick owns this. `yaw` / `pitch` are the orbit, already updated by the pad. */
+export function orbitCamera(camera, pos, yaw, pitch, dt, sun) {
+  const horiz = WALK_CAM_DIST * Math.cos(pitch);
+  _desired.set(
+    pos.x + Math.sin(yaw) * horiz,
+    pos.y + WALK_CAM_LOOK + Math.sin(pitch) * WALK_CAM_DIST,
+    pos.z + Math.cos(yaw) * horiz,
+  );
+  camera.position.lerp(_desired, 1 - Math.exp(-CAM_FOLLOW * dt));
+  _look.set(pos.x, pos.y + WALK_CAM_LOOK, pos.z);
+  camera.lookAt(_look);
+  parkSun(sun, pos);
 }
