@@ -1,5 +1,13 @@
 import iro from "@jaames/iro";
-import { MENU_SCROLL } from "../constants.js";
+import {
+  MENU_SCROLL,
+  formatClock,
+  getSkyClock,
+  parseClock,
+  persistSkyClock,
+  setSkyAzimuth,
+  setSkyMinutes,
+} from "../constants.js";
 import {
   HOODIE_PATTERNS,
   loadHoodie,
@@ -7,6 +15,7 @@ import {
   saveHoodie,
 } from "../scene/skaterModel.js";
 import { HOWTO_BODY, TRICKS, sampleTrick } from "./howto.js";
+import { iconHtml } from "./icons.js";
 import { bindSticks } from "./sticks.js";
 
 const COPY = {
@@ -40,24 +49,33 @@ export function bindOverlay(root) {
 }
 
 const ITEMS = [
-  { id: "resume", label: "Resume" },
-  { id: "restart", label: "Restart" },
-  { id: "hoodie", label: "Hoodie" },
-  { id: "howto", label: "How to play" },
-  { id: "advanced", label: "Advanced settings" },
-  { id: "exit", label: "Exit" },
+  { id: "resume", label: "Resume", icon: "player-play" },
+  { id: "restart", label: "Restart", icon: "reload" },
+  { id: "options", label: "Options", icon: "settings" },
+  { id: "howto", label: "How to play", icon: "book" },
+  { id: "exit", label: "Exit", icon: "logout" },
+];
+
+const OPTION_ITEMS = [
+  { id: "hoodie", label: "Hoodie", icon: "shirt" },
+  { id: "daynight", label: "Day / Night", icon: "sun-moon" },
+  { id: "advanced", label: "Advanced settings", icon: "adjustments-horizontal" },
 ];
 
 const TITLES = {
   root: "NOISSES",
+  options: "OPTIONS",
   hoodie: "HOODIE",
+  daynight: "DAY / NIGHT",
   howto: "HOW TO PLAY",
   tricks: "TRICK LIST",
 };
 
 const HINTS = {
   root: "↑↓ select · × confirm · ○ or Options closes · hold Options for advanced",
+  options: "↑↓ select · × open · ○ back",
   hoodie: "↑↓ select · ←→ pattern or hue · ○ back",
+  daynight: "↑↓ select · ←→ time or sun angle · ○ back",
   howto: "↑↓ select · sticks scroll · × open · ○ back",
   tricks: "↑↓ pick a trick · sticks scroll · ○ back · paths are Regular (Goofy swaps the sticks)",
 };
@@ -84,16 +102,23 @@ export function bindPause(root, hooks) {
   const hintEl = root.querySelector("[data-pause-hint]");
   const screens = {
     root: root.querySelector("[data-screen='root']"),
+    options: root.querySelector("[data-screen='options']"),
     hoodie: root.querySelector("[data-screen='hoodie']"),
+    daynight: root.querySelector("[data-screen='daynight']"),
     howto: root.querySelector("[data-screen='howto']"),
     tricks: root.querySelector("[data-screen='tricks']"),
   };
   const list = root.querySelector("[data-pause-list]");
+  const optionList = root.querySelector("[data-options-list]");
   const patternBtn = root.querySelector("[data-hoodie-pattern]");
   const colorABtn = root.querySelector("[data-hoodie-a]");
   const colorBBtn = root.querySelector("[data-hoodie-b]");
   const hoodieBack = root.querySelector("[data-hoodie-back]");
   const colorBBox = root.querySelector("[data-color-b]");
+  const timeBtn = root.querySelector("[data-clock-time]");
+  const timeInput = root.querySelector("[data-clock-input]");
+  const azBtn = root.querySelector("[data-clock-az]");
+  const clockBack = root.querySelector("[data-clock-back]");
   const howtoBody = root.querySelector("[data-howto-body]");
   const howtoList = root.querySelector("[data-howto-list]");
   const trickList = root.querySelector("[data-trick-list]");
@@ -105,7 +130,9 @@ export function bindPause(root, hooks) {
   let screen = "root";
   let open = false;
   let index = 0;
+  let optionIndex = 0;
   let hoodieIndex = 0;
+  let clockIndex = 0;
   let howtoIndex = 0;
   let trickIndex = 0;
   let look = loadHoodie();
@@ -121,13 +148,27 @@ export function bindPause(root, hooks) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "row reset";
-    btn.textContent = item.label;
+    btn.innerHTML = `${iconHtml(item.icon)}<span>${item.label}</span>`;
     btn.addEventListener("pointerdown", () => {
       index = i;
       paint();
       hooks.onPick(item.id);
     });
     list.appendChild(btn);
+    return btn;
+  });
+
+  const optionBtns = OPTION_ITEMS.map((item, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "row reset";
+    btn.innerHTML = `${iconHtml(item.icon)}<span>${item.label}</span>`;
+    btn.addEventListener("pointerdown", () => {
+      optionIndex = i;
+      paint();
+      pickOption(item.id);
+    });
+    optionList.appendChild(btn);
     return btn;
   });
 
@@ -138,9 +179,39 @@ export function bindPause(root, hooks) {
       if (look.pattern === "solid" && i === 2) hoodieIndex = 1;
       paint();
       if (i === 0) cyclePattern(1);
-      if (i === 3) go("root");
+      if (i === 3) go("options");
     });
   });
+
+  timeBtn.addEventListener("pointerdown", () => {
+    clockIndex = 0;
+    paint();
+  });
+  timeInput.addEventListener("pointerdown", (e) => e.stopPropagation());
+  timeInput.addEventListener("change", () => {
+    const mins = parseClock(timeInput.value);
+    if (mins == null) return;
+    setSkyMinutes(mins);
+    paint();
+  });
+  azBtn.addEventListener("pointerdown", (e) => {
+    clockIndex = 1;
+    const track = azBtn.querySelector(".track");
+    const box = track.getBoundingClientRect();
+    const t = box.width > 0 ? (e.clientX - box.left) / box.width : 0;
+    setSkyAzimuth(Math.min(1, Math.max(0, t)) * 360);
+    paint();
+    azBtn.setPointerCapture(e.pointerId);
+  });
+  azBtn.addEventListener("pointermove", (e) => {
+    if (!azBtn.hasPointerCapture(e.pointerId)) return;
+    const track = azBtn.querySelector(".track");
+    const box = track.getBoundingClientRect();
+    const t = box.width > 0 ? (e.clientX - box.left) / box.width : 0;
+    setSkyAzimuth(Math.min(1, Math.max(0, t)) * 360);
+    paint();
+  });
+  clockBack.addEventListener("pointerdown", () => go("options"));
 
   const howtoBtns = [];
   for (const item of [
@@ -150,7 +221,7 @@ export function bindPause(root, hooks) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "row reset";
-    btn.textContent = item.label;
+    btn.innerHTML = `${iconHtml(item.id === "tricks" ? "book" : "logout")}<span>${item.label}</span>`;
     btn.addEventListener("pointerdown", () => {
       howtoIndex = howtoBtns.length;
       paint();
@@ -178,7 +249,7 @@ export function bindPause(root, hooks) {
   const trickBack = document.createElement("button");
   trickBack.type = "button";
   trickBack.className = "row reset";
-  trickBack.textContent = "Back";
+  trickBack.innerHTML = `${iconHtml("logout")}<span>Back</span>`;
   trickBack.addEventListener("pointerdown", () => go("howto"));
   trickList.appendChild(trickBack);
 
@@ -220,6 +291,12 @@ export function bindPause(root, hooks) {
     paint();
   }
 
+  function pickOption(id) {
+    if (id === "hoodie") go("hoodie");
+    else if (id === "daynight") go("daynight");
+    else if (id === "advanced") hooks.onPick("advanced");
+  }
+
   function go(next) {
     screen = next;
     if (next === "tricks") {
@@ -237,6 +314,9 @@ export function bindPause(root, hooks) {
     for (const [id, el] of Object.entries(screens)) el.hidden = id !== screen;
 
     buttons.forEach((btn, i) => btn.classList.toggle("on", open && screen === "root" && i === index));
+    optionBtns.forEach((btn, i) =>
+      btn.classList.toggle("on", open && screen === "options" && i === optionIndex),
+    );
 
     patternBtn.querySelector("[data-val]").textContent = patternLabel(look.pattern);
     const rows = hoodieRows();
@@ -245,6 +325,16 @@ export function bindPause(root, hooks) {
     colorBBtn.hidden = look.pattern === "solid";
     colorBBox.hidden = look.pattern === "solid";
     rows.forEach((btn, i) => btn.classList.toggle("on", open && screen === "hoodie" && i === hoodieIndex));
+
+    const clock = getSkyClock();
+    const stamp = formatClock(clock.minutes);
+    if (timeInput.value !== stamp) timeInput.value = stamp;
+    azBtn.querySelector(".fill").style.width = `${Math.round((clock.azimuth / 360) * 100)}%`;
+    azBtn.querySelector("[data-val]").textContent = `${Math.round(clock.azimuth)}°`;
+    const clockRows = [timeBtn, azBtn, clockBack];
+    clockRows.forEach((btn, i) =>
+      btn.classList.toggle("on", open && screen === "daynight" && i === clockIndex),
+    );
 
     howtoBtns.forEach((btn, i) =>
       btn.classList.toggle("on", open && screen === "howto" && i === howtoIndex),
@@ -275,6 +365,7 @@ export function bindPause(root, hooks) {
   }
 
   function hide() {
+    persistSkyClock();
     open = false;
     screen = "root";
     root.hidden = true;
@@ -295,7 +386,11 @@ export function bindPause(root, hooks) {
         go("howto");
         return true;
       }
-      if (screen === "hoodie" || screen === "howto") {
+      if (screen === "hoodie" || screen === "daynight") {
+        go("options");
+        return true;
+      }
+      if (screen === "options" || screen === "howto") {
         go("root");
         return true;
       }
@@ -304,9 +399,13 @@ export function bindPause(root, hooks) {
     move(dir) {
       if (screen === "root") {
         index = (index + dir + ITEMS.length) % ITEMS.length;
+      } else if (screen === "options") {
+        optionIndex = (optionIndex + dir + OPTION_ITEMS.length) % OPTION_ITEMS.length;
       } else if (screen === "hoodie") {
         const n = hoodieRows().length;
         hoodieIndex = (hoodieIndex + dir + n) % n;
+      } else if (screen === "daynight") {
+        clockIndex = (clockIndex + dir + 3) % 3;
       } else if (screen === "howto") {
         howtoIndex = (howtoIndex + dir + howtoBtns.length) % howtoBtns.length;
       } else {
@@ -321,18 +420,27 @@ export function bindPause(root, hooks) {
       paint();
     },
     nudge(dir) {
-      if (screen !== "hoodie") return;
-      const row = hoodieRows()[hoodieIndex];
-      if (row === patternBtn) cyclePattern(dir > 0 ? 1 : -1);
-      else if (row === colorABtn) pickerA.color.hue = (pickerA.color.hue + dir * 8 + 360) % 360;
-      else if (row === colorBBtn) pickerB.color.hue = (pickerB.color.hue + dir * 8 + 360) % 360;
+      if (screen === "hoodie") {
+        const row = hoodieRows()[hoodieIndex];
+        if (row === patternBtn) cyclePattern(dir > 0 ? 1 : -1);
+        else if (row === colorABtn) pickerA.color.hue = (pickerA.color.hue + dir * 8 + 360) % 360;
+        else if (row === colorBBtn) pickerB.color.hue = (pickerB.color.hue + dir * 8 + 360) % 360;
+        return;
+      }
+      if (screen !== "daynight") return;
+      if (clockIndex === 0) setSkyMinutes(getSkyClock().minutes + dir * 15);
+      else if (clockIndex === 1) setSkyAzimuth(getSkyClock().azimuth + dir * 8);
+      paint();
     },
     confirm() {
       if (screen === "root") hooks.onPick(ITEMS[index].id);
+      else if (screen === "options") pickOption(OPTION_ITEMS[optionIndex].id);
       else if (screen === "hoodie") {
         const row = hoodieRows()[hoodieIndex];
-        if (row === hoodieBack) go("root");
+        if (row === hoodieBack) go("options");
         else if (row === patternBtn) cyclePattern(1);
+      } else if (screen === "daynight") {
+        if (clockIndex === 2) go("options");
       } else if (screen === "howto") {
         if (howtoIndex === 0) go("tricks");
         else go("root");
@@ -357,6 +465,9 @@ export function bindPause(root, hooks) {
     },
     openHowto() {
       go("howto");
+    },
+    openOptions() {
+      go("options");
     },
   };
 }

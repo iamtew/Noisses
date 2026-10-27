@@ -309,6 +309,26 @@ body {
   padding: 0.85rem 0.8rem;
 }
 
+#pause .row[data-clock-time] {
+  grid-template-columns: 1.6rem 7rem auto;
+}
+
+#pause .row[data-clock-az] {
+  grid-template-columns: 1.6rem 8rem minmax(5rem, 14rem) 4.2rem;
+}
+
+#pause [data-clock-time] input[type="time"] {
+  justify-self: start;
+  width: 9.5rem;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  border-radius: 0.25rem;
+  color: inherit;
+  font: inherit;
+  font-size: 1.15rem;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 #menu .row.on,
 #pause .row.on {
   border-left-color: #b8432e;
@@ -336,21 +356,24 @@ body {
   font-size: 1.05rem;
 }
 
-#menu .track {
+#menu .track,
+#pause .track {
   height: 0.55rem;
   background: rgba(255, 255, 255, 0.16);
   border-radius: 99px;
   overflow: hidden;
 }
 
-#menu .fill {
+#menu .fill,
+#pause .fill {
   display: block;
   height: 100%;
   width: 0;
   background: #e7e1d6;
 }
 
-#menu .val {
+#menu .val,
+#pause .val {
   font-size: 1rem;
   text-align: right;
   letter-spacing: 0.04em;

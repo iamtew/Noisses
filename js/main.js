@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { FIXED_DT, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, selfCheckTune } from "./constants.js";
+import { FIXED_DT, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, persistSkyClock, selfCheckSky, selfCheckTune } from "./constants.js";
 import {
   IDLE_INPUT,
   anyButtonPressed,
@@ -29,6 +29,7 @@ selfCheckAudio();
 selfCheckSkater();
 selfCheckWalker();
 selfCheckTune();
+selfCheckSky();
 selfCheckHowto();
 
 const canvas = document.getElementById("view");
@@ -69,7 +70,7 @@ const pause = bindPause(document.getElementById("pause"), {
     else if (id === "restart") {
       respawnHere();
       pause.hide();
-    } else if (id === "hoodie") pause.openHoodie();
+    } else if (id === "options") pause.openOptions();
     else if (id === "howto") pause.openHowto();
     else if (id === "advanced") {
       pause.hide();
@@ -284,7 +285,10 @@ function beginMount() {
 
 function closeAdvanced() {
   menu.hide();
-  if (advancedFromPause) pause.show();
+  if (advancedFromPause) {
+    pause.show();
+    pause.openOptions();
+  }
   advancedFromPause = false;
 }
 
@@ -349,6 +353,7 @@ function tick(now) {
     }
   } else if (!input.options) {
     if (playing && !menusOpen() && optWas && !optOpened && optHold > 0 && optHold < MENU_HOLD) {
+      persistSkyClock();
       pause.show();
     }
     optHold = 0;
@@ -422,6 +427,7 @@ function tick(now) {
       else if (board.grounded) board.regular = !board.regular;
     }
     board.circleLatch = input.circle;
+    advanceSkyClock(frameDt);
     tickHold(input, frameDt);
     if (spawnFlash > 0) spawnFlash = Math.max(0, spawnFlash - frameDt);
     paintCharge(frameDt);

@@ -57,6 +57,26 @@
       <div data-screen="root">
         <div data-pause-list></div>
       </div>
+      <div data-screen="options" hidden>
+        <div data-options-list></div>
+      </div>
+      <div data-screen="daynight" hidden>
+        <button type="button" class="row" data-clock-time>
+          <span class="ico" style="-webkit-mask-image:url('assets/icons/clock.svg');mask-image:url('assets/icons/clock.svg')" aria-hidden="true"></span>
+          <span class="name">Time</span>
+          <input type="time" data-clock-input step="60" lang="en-GB" />
+        </button>
+        <button type="button" class="row" data-clock-az>
+          <span class="ico" style="-webkit-mask-image:url('assets/icons/sun.svg');mask-image:url('assets/icons/sun.svg')" aria-hidden="true"></span>
+          <span class="name">Sun angle</span>
+          <span class="track"><span class="fill"></span></span>
+          <span class="val" data-val></span>
+        </button>
+        <button type="button" class="row reset" data-clock-back>
+          <span class="ico" style="-webkit-mask-image:url('assets/icons/logout.svg');mask-image:url('assets/icons/logout.svg')" aria-hidden="true"></span>
+          <span>Back</span>
+        </button>
+      </div>
       <div data-screen="hoodie" hidden>
         <button type="button" class="row" data-hoodie-pattern>
           <span class="name">Pattern</span>

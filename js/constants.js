@@ -116,6 +116,19 @@ export const MENU_SCROLL = 520;
 /** Master gain for synthesized skate bed. */
 export let AUDIO_MASTER = 0.38;
 
+/** Game seconds per real second. Slider multiplies the 60× stock (1h = 1m). */
+export let TIME_SCALE = 60;
+
+/** Minutes past midnight, 0–1440. Default is a skateable afternoon. */
+export const CLOCK_DEFAULT_MIN = 14 * 60;
+
+/** Sun azimuth (deg). 0 = north, 90 = east. Plaza +X is north, +Z is east. */
+export const SUN_AZIMUTH_DEFAULT = 45;
+
+/** Civil-ish twilight band (deg). Below −8 is night, above +6 is day. */
+export const TWILIGHT_BELOW = 8;
+export const TWILIGHT_ABOVE = 6;
+
 /** Resonant lowpass on rolling noise. Q is the ring; higher = more tone, less hiss. */
 export const ROLL_Q = 4.5;
 export const ROLL_HZ = 260;
@@ -229,6 +242,9 @@ export const FLIP_DAMP = 1.4;
 /** Land/catch if flip (or shuv) is this close to a full turn, rad. ~35°. */
 export const CATCH_ANGLE = 0.6;
 
+/** Stick |Y| that counts as planted for a catch. */
+export const CATCH_STICK = 0.28;
+
 /** Truck-to-rail distance that counts as contact (m). Not a magnet. */
 export const GRIND_LOCK = 0.13;
 
@@ -338,6 +354,86 @@ function loadTune() {
 
 loadTune();
 
+const SKY_KEY = "noisses-sky";
+const skyClock = { minutes: CLOCK_DEFAULT_MIN, azimuth: SUN_AZIMUTH_DEFAULT };
+
+function wrapMin(m) {
+  return ((m % 1440) + 1440) % 1440;
+}
+
+function wrapDeg(d) {
+  return ((d % 360) + 360) % 360;
+}
+
+function saveSky() {
+  try {
+    localStorage.setItem(SKY_KEY, JSON.stringify(skyClock));
+  } catch {
+    /* private window */
+  }
+}
+
+function loadSky() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SKY_KEY) || "null");
+    if (!raw) return;
+    if (typeof raw.minutes === "number") skyClock.minutes = wrapMin(raw.minutes);
+    if (typeof raw.azimuth === "number") skyClock.azimuth = wrapDeg(raw.azimuth);
+  } catch {
+    /* bad json */
+  }
+}
+
+loadSky();
+
+export function getSkyClock() {
+  return { minutes: skyClock.minutes, azimuth: skyClock.azimuth };
+}
+
+export function setSkyMinutes(minutes, persist = true) {
+  skyClock.minutes = wrapMin(minutes);
+  if (persist) saveSky();
+}
+
+export function setSkyAzimuth(deg, persist = true) {
+  skyClock.azimuth = wrapDeg(deg);
+  if (persist) saveSky();
+}
+
+/** `dt` is real seconds. TIME_SCALE is game seconds per real second. */
+export function advanceSkyClock(dt) {
+  skyClock.minutes = wrapMin(skyClock.minutes + (dt * TIME_SCALE) / 60);
+}
+
+export function persistSkyClock() {
+  saveSky();
+}
+
+/** Toy sun: 06:00 rise, noon overhead, 18:00 set. Not a real latitude. */
+export function sunElevationDeg(minutes) {
+  return 90 * Math.sin((wrapMin(minutes) / 1440) * Math.PI * 2 - Math.PI / 2);
+}
+
+export function isTwilight(elev) {
+  return elev > -TWILIGHT_BELOW && elev < TWILIGHT_ABOVE;
+}
+
+export function formatClock(minutes) {
+  const m = Math.floor(wrapMin(minutes));
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+export function parseClock(value) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(value || "");
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
 export function selfCheckTune() {
   const snap = getTune();
   setTune("pop", 9, false);
@@ -350,4 +446,16 @@ export function selfCheckTune() {
   if (tune.gravity !== 2.2) throw new Error("tune gravity");
   if (Math.abs(GRAVITY - TUNE_BASE.gravity * 2.2) > 0.01) throw new Error("tune gravity publish");
   for (const id of Object.keys(snap)) setTune(id, snap[id], false);
+}
+
+export function selfCheckSky() {
+  if (Math.abs(sunElevationDeg(0) + 90) > 0.01) throw new Error("sky midnight");
+  if (Math.abs(sunElevationDeg(360)) > 0.01) throw new Error("sky sunrise");
+  if (Math.abs(sunElevationDeg(720) - 90) > 0.01) throw new Error("sky noon");
+  if (Math.abs(sunElevationDeg(1080)) > 0.01) throw new Error("sky sunset");
+  if (!isTwilight(sunElevationDeg(360))) throw new Error("sky twilight dawn");
+  if (isTwilight(sunElevationDeg(0))) throw new Error("sky night not twilight");
+  if (isTwilight(sunElevationDeg(720))) throw new Error("sky day not twilight");
+  if (parseClock("14:00") !== 840) throw new Error("sky parse");
+  if (formatClock(840) !== "14:00") throw new Error("sky format");
 }
