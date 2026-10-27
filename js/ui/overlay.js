@@ -10,6 +10,7 @@ import {
   parseClock,
   persistSkyClock,
   setSkyAzimuth,
+  setSkyCycle,
   setSkyMinutes,
   setTune,
 } from "../constants.js";
@@ -84,7 +85,7 @@ const HINTS = {
   root: "↑↓ select · × confirm · ○ or Options closes · hold Options for advanced",
   options: "↑↓ select · × open · ○ back",
   hoodie: "↑↓ select · ←→ pattern or hue · ○ back",
-  daynight: "↑↓ select · ←→ time or sun angle · ○ back",
+  daynight: "↑↓ select · ←→ cycle, time, or sun angle · ○ back",
   audio: "↑↓ select · ←→ volume · × restore · ○ back",
   howto: "↑↓ select · sticks scroll · × open · ○ back",
   tricks: "↑↓ pick a trick · sticks scroll · ○ back · paths are Regular (Goofy swaps the sticks)",
@@ -126,6 +127,7 @@ export function bindPause(root, hooks) {
   const colorBBtn = root.querySelector("[data-hoodie-b]");
   const hoodieBack = root.querySelector("[data-hoodie-back]");
   const colorBBox = root.querySelector("[data-color-b]");
+  const cycleBtn = root.querySelector("[data-clock-cycle]");
   const timeBtn = root.querySelector("[data-clock-time]");
   const timeInput = root.querySelector("[data-clock-input]");
   const azBtn = root.querySelector("[data-clock-az]");
@@ -197,8 +199,13 @@ export function bindPause(root, hooks) {
     });
   });
 
-  timeBtn.addEventListener("pointerdown", () => {
+  cycleBtn.addEventListener("pointerdown", () => {
     clockIndex = 0;
+    setSkyCycle(!getSkyClock().cycle);
+    paint();
+  });
+  timeBtn.addEventListener("pointerdown", () => {
+    clockIndex = 1;
     paint();
   });
   timeInput.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -214,7 +221,7 @@ export function bindPause(root, hooks) {
   timeInput.addEventListener("change", commitClock);
   timeInput.addEventListener("blur", commitClock);
   azBtn.addEventListener("pointerdown", (e) => {
-    clockIndex = 1;
+    clockIndex = 2;
     const track = azBtn.querySelector(".track");
     const box = track.getBoundingClientRect();
     const t = box.width > 0 ? (e.clientX - box.left) / box.width : 0;
@@ -376,9 +383,10 @@ export function bindPause(root, hooks) {
     const clock = getSkyClock();
     const stamp = formatClock(clock.minutes);
     if (document.activeElement !== timeInput && timeInput.value !== stamp) timeInput.value = stamp;
+    cycleBtn.querySelector("[data-val]").textContent = clock.cycle ? "On" : "Off";
     azBtn.querySelector(".fill").style.width = `${Math.round((clock.azimuth / 360) * 100)}%`;
     azBtn.querySelector("[data-val]").textContent = `${Math.round(clock.azimuth)}°`;
-    const clockRows = [timeBtn, azBtn, clockBack];
+    const clockRows = [cycleBtn, timeBtn, azBtn, clockBack];
     clockRows.forEach((btn, i) =>
       btn.classList.toggle("on", open && screen === "daynight" && i === clockIndex),
     );
@@ -461,7 +469,7 @@ export function bindPause(root, hooks) {
         const n = hoodieRows().length;
         hoodieIndex = (hoodieIndex + dir + n) % n;
       } else if (screen === "daynight") {
-        clockIndex = (clockIndex + dir + 3) % 3;
+        clockIndex = (clockIndex + dir + 4) % 4;
       } else if (screen === "audio") {
         audioIndex = (audioIndex + dir + 2) % 2;
       } else if (screen === "howto") {
@@ -486,8 +494,9 @@ export function bindPause(root, hooks) {
         return;
       }
       if (screen === "daynight") {
-        if (clockIndex === 0) setSkyMinutes(getSkyClock().minutes + dir * 15);
-        else if (clockIndex === 1) setSkyAzimuth(getSkyClock().azimuth + dir * 8);
+        if (clockIndex === 0) setSkyCycle(!getSkyClock().cycle);
+        else if (clockIndex === 1) setSkyMinutes(getSkyClock().minutes + dir * 15);
+        else if (clockIndex === 2) setSkyAzimuth(getSkyClock().azimuth + dir * 8);
         paint();
         return;
       }
@@ -506,7 +515,10 @@ export function bindPause(root, hooks) {
         if (row === hoodieBack) go("options");
         else if (row === patternBtn) cyclePattern(1);
       } else if (screen === "daynight") {
-        if (clockIndex === 2) go("options");
+        if (clockIndex === 0) {
+          setSkyCycle(!getSkyClock().cycle);
+          paint();
+        } else if (clockIndex === 3) go("options");
       } else if (screen === "audio") {
         if (audioIndex === 1) go("options");
         else {

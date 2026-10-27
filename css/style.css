@@ -313,6 +313,10 @@ body {
   padding: 0.85rem 0.8rem;
 }
 
+#pause .row[data-clock-cycle] {
+  grid-template-columns: 1.6rem 7rem auto;
+}
+
 #pause .row[data-clock-time] {
   grid-template-columns: 1.6rem 7rem auto;
 }

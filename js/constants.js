@@ -128,7 +128,7 @@ export let AUDIO_MASTER = 0.38;
 export let TIME_SCALE = 60;
 
 /** Minutes past midnight, 0–1440. Default is a skateable afternoon. */
-export const CLOCK_DEFAULT_MIN = 14 * 60;
+export const CLOCK_DEFAULT_MIN = 16 * 60 + 20;
 
 /** Sun azimuth (deg). 0 = north, 90 = east. Plaza +X is north, +Z is east. */
 export const SUN_AZIMUTH_DEFAULT = 45;
@@ -378,7 +378,7 @@ function loadTune() {
 loadTune();
 
 const SKY_KEY = "noisses-sky";
-const skyClock = { minutes: CLOCK_DEFAULT_MIN, azimuth: SUN_AZIMUTH_DEFAULT };
+const skyClock = { minutes: CLOCK_DEFAULT_MIN, azimuth: SUN_AZIMUTH_DEFAULT, cycle: false };
 
 function wrapMin(m) {
   return ((m % 1440) + 1440) % 1440;
@@ -400,8 +400,11 @@ function loadSky() {
   try {
     const raw = JSON.parse(localStorage.getItem(SKY_KEY) || "null");
     if (!raw) return;
-    if (typeof raw.minutes === "number") skyClock.minutes = wrapMin(raw.minutes);
     if (typeof raw.azimuth === "number") skyClock.azimuth = wrapDeg(raw.azimuth);
+    if (typeof raw.cycle === "boolean") {
+      skyClock.cycle = raw.cycle;
+      if (typeof raw.minutes === "number") skyClock.minutes = wrapMin(raw.minutes);
+    }
   } catch {
     /* bad json */
   }
@@ -410,7 +413,7 @@ function loadSky() {
 loadSky();
 
 export function getSkyClock() {
-  return { minutes: skyClock.minutes, azimuth: skyClock.azimuth };
+  return { minutes: skyClock.minutes, azimuth: skyClock.azimuth, cycle: skyClock.cycle };
 }
 
 export function setSkyMinutes(minutes, persist = true) {
@@ -423,8 +426,14 @@ export function setSkyAzimuth(deg, persist = true) {
   if (persist) saveSky();
 }
 
+export function setSkyCycle(on, persist = true) {
+  skyClock.cycle = Boolean(on);
+  if (persist) saveSky();
+}
+
 /** `dt` is real seconds. TIME_SCALE is game seconds per real second. */
 export function advanceSkyClock(dt) {
+  if (!skyClock.cycle) return;
   skyClock.minutes = wrapMin(skyClock.minutes + (dt * TIME_SCALE) / 60);
 }
 
@@ -519,7 +528,17 @@ export function selfCheckSky() {
   if (!isTwilight(sunElevationDeg(SUN_RISE_MIN))) throw new Error("sky twilight dawn");
   if (!isTwilight(sunElevationDeg(SUN_SET_MIN))) throw new Error("sky twilight dusk");
   if (isTwilight(sunElevationDeg(0))) throw new Error("sky night not twilight");
-  if (isTwilight(sunElevationDeg(14 * 60))) throw new Error("sky day not twilight");
+  if (isTwilight(sunElevationDeg(CLOCK_DEFAULT_MIN))) throw new Error("sky day not twilight");
   if (parseClock("14:00") !== 840) throw new Error("sky parse");
   if (formatClock(840) !== "14:00") throw new Error("sky format");
+  if (formatClock(CLOCK_DEFAULT_MIN) !== "16:20") throw new Error("sky default");
+  const snap = getSkyClock();
+  setSkyCycle(false, false);
+  const m = getSkyClock().minutes;
+  advanceSkyClock(10);
+  if (getSkyClock().minutes !== m) throw new Error("sky cycle paused");
+  setSkyCycle(true, false);
+  if (!getSkyClock().cycle) throw new Error("sky cycle on");
+  setSkyCycle(snap.cycle, false);
+  setSkyMinutes(snap.minutes, false);
 }
