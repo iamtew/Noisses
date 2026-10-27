@@ -1,5 +1,5 @@
-export const STICK_LEFT = "#e23b3b";
-export const STICK_RIGHT = "#8a4dff";
+export const STICK_LEFT = "#00FFFF";
+export const STICK_RIGHT = "#FF00FF";
 
 const REACH = 28;
 const TRAIL_MS = 150;
@@ -57,7 +57,7 @@ function bindPad(el, color) {
   return { set, reset };
 }
 
-/** Two pads: left stick red, right stick purple. Trails die in ~150ms. */
+/** Two pads: left stick cyan, right stick magenta. Trails die in ~150ms. */
 export function bindSticks(root) {
   const pads = root.querySelectorAll(".pad");
   const left = bindPad(pads[0], STICK_LEFT);

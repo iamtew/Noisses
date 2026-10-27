@@ -14,7 +14,7 @@ export const HOWTO_BODY =
   "Pause → Options is hoodie, day/night, audio, Regular/Switch, and those sliders. Time scale lives in advanced.\n" +
   "△ steps off the board. It lives in the left hand, graphic out, truck in the fist. △ again gets back on.\n" +
   "Off the board the left stick walks, the right stick swings the camera, × jumps, and ×× runs.\n" +
-  "L3+R3 together paints the sticks: left red, right purple.";
+  "L3+R3 together paints the sticks: left cyan, right magenta.";
 
 export const RIDES = ["normal", "fakie", "switch", "nollie"];
 export const KINDS = ["flips", "grinds"];
