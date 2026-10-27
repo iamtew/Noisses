@@ -129,6 +129,11 @@ export const SUN_AZIMUTH_DEFAULT = 45;
 export const TWILIGHT_BELOW = 8;
 export const TWILIGHT_ABOVE = 6;
 
+/** Embarcadero, mid-August PDT. Rise 06:30, set 20:00. Peak ~66° (lat 37.8° + Aug declination). */
+export const SUN_RISE_MIN = 6 * 60 + 30;
+export const SUN_SET_MIN = 20 * 60;
+const SUN_PEAK_EL = 66;
+
 /** Resonant lowpass on rolling noise. Q is the ring; higher = more tone, less hiss. */
 export const ROLL_Q = 4.5;
 export const ROLL_HZ = 260;
@@ -419,9 +424,18 @@ export function persistSkyClock() {
   saveSky();
 }
 
-/** Toy sun: 06:00 rise, noon overhead, 18:00 set. Not a real latitude. */
+/** Toy sun timed for SF August. Horizon at rise/set, peak at the midpoint (~13:15). */
 export function sunElevationDeg(minutes) {
-  return 90 * Math.sin((wrapMin(minutes) / 1440) * Math.PI * 2 - Math.PI / 2);
+  const m = wrapMin(minutes);
+  const rise = SUN_RISE_MIN;
+  const set = SUN_SET_MIN;
+  if (m >= rise && m <= set) {
+    const t = (m - rise) / (set - rise);
+    return SUN_PEAK_EL * Math.sin(t * Math.PI);
+  }
+  const nightLen = 1440 - set + rise;
+  const u = m >= set ? (m - set) / nightLen : (1440 - set + m) / nightLen;
+  return -SUN_PEAK_EL * Math.sin(u * Math.PI);
 }
 
 export function isTwilight(elev) {
@@ -487,13 +501,15 @@ export function selfCheckTune() {
 }
 
 export function selfCheckSky() {
-  if (Math.abs(sunElevationDeg(0) + 90) > 0.01) throw new Error("sky midnight");
-  if (Math.abs(sunElevationDeg(360)) > 0.01) throw new Error("sky sunrise");
-  if (Math.abs(sunElevationDeg(720) - 90) > 0.01) throw new Error("sky noon");
-  if (Math.abs(sunElevationDeg(1080)) > 0.01) throw new Error("sky sunset");
-  if (!isTwilight(sunElevationDeg(360))) throw new Error("sky twilight dawn");
+  if (!(sunElevationDeg(0) < -40)) throw new Error("sky midnight");
+  if (Math.abs(sunElevationDeg(SUN_RISE_MIN)) > 0.5) throw new Error("sky sunrise");
+  if (Math.abs(sunElevationDeg(SUN_SET_MIN)) > 0.5) throw new Error("sky sunset");
+  const noon = (SUN_RISE_MIN + SUN_SET_MIN) / 2;
+  if (!(sunElevationDeg(noon) > 60)) throw new Error("sky noon");
+  if (!isTwilight(sunElevationDeg(SUN_RISE_MIN))) throw new Error("sky twilight dawn");
+  if (!isTwilight(sunElevationDeg(SUN_SET_MIN))) throw new Error("sky twilight dusk");
   if (isTwilight(sunElevationDeg(0))) throw new Error("sky night not twilight");
-  if (isTwilight(sunElevationDeg(720))) throw new Error("sky day not twilight");
+  if (isTwilight(sunElevationDeg(14 * 60))) throw new Error("sky day not twilight");
   if (parseClock("14:00") !== 840) throw new Error("sky parse");
   if (formatClock(840) !== "14:00") throw new Error("sky format");
 }

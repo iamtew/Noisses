@@ -36,12 +36,12 @@ const DISC_DIST = 42;
 const SKY_STOPS = [
   { m: 0, bg: 0x0b1020, fog: 0x0b1020, hemiSky: 0x4a5a78, hemiGnd: 0x1c1816, hemi: 0.28, fill: 0.08, sun: 0xc9d4ea, sunI: 0.22, fillCol: 0x6a7a98, exp: 0.68 },
   { m: 330, bg: 0x14182a, fog: 0x14182a, hemiSky: 0x5a4a68, hemiGnd: 0x2a201c, hemi: 0.32, fill: 0.1, sun: 0xd0c8e0, sunI: 0.24, fillCol: 0x7a6a88, exp: 0.72 },
-  { m: 360, bg: 0xc56a52, fog: 0xb8624c, hemiSky: 0xffb090, hemiGnd: 0x6a3a32, hemi: 0.62, fill: 0.28, sun: 0xffb070, sunI: 0.75, fillCol: 0xffa090, exp: 0.95 },
-  { m: 420, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xfff1dd, sunI: 1.28, fillCol: 0xc9d7ea, exp: 1.12 },
-  { m: 720, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xfff1dd, sunI: 1.28, fillCol: 0xc9d7ea, exp: 1.12 },
-  { m: 1020, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xffe4c4, sunI: 1.15, fillCol: 0xc9d7ea, exp: 1.08 },
-  { m: 1080, bg: 0x9a4a62, fog: 0x8a4258, hemiSky: 0xf0a888, hemiGnd: 0x4a2a38, hemi: 0.58, fill: 0.26, sun: 0xff9068, sunI: 0.7, fillCol: 0xd08090, exp: 0.92 },
-  { m: 1140, bg: 0x12162a, fog: 0x12162a, hemiSky: 0x3a4a70, hemiGnd: 0x1a1618, hemi: 0.3, fill: 0.09, sun: 0xb8c8e8, sunI: 0.22, fillCol: 0x5a6a88, exp: 0.7 },
+  { m: 370, bg: 0xc56a52, fog: 0xb8624c, hemiSky: 0xffb090, hemiGnd: 0x6a3a32, hemi: 0.62, fill: 0.28, sun: 0xffb070, sunI: 0.75, fillCol: 0xffa090, exp: 0.95 },
+  { m: 450, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xfff1dd, sunI: 1.28, fillCol: 0xc9d7ea, exp: 1.12 },
+  { m: 795, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xfff1dd, sunI: 1.28, fillCol: 0xc9d7ea, exp: 1.12 },
+  { m: 1140, bg: 0x8b9aaa, fog: 0x8b9aaa, hemiSky: 0xd7e2ee, hemiGnd: 0x746c62, hemi: 0.95, fill: 0.42, sun: 0xffe4c4, sunI: 1.15, fillCol: 0xc9d7ea, exp: 1.08 },
+  { m: 1200, bg: 0x9a4a62, fog: 0x8a4258, hemiSky: 0xf0a888, hemiGnd: 0x4a2a38, hemi: 0.58, fill: 0.26, sun: 0xff9068, sunI: 0.7, fillCol: 0xd08090, exp: 0.92 },
+  { m: 1245, bg: 0x12162a, fog: 0x12162a, hemiSky: 0x3a4a70, hemiGnd: 0x1a1618, hemi: 0.3, fill: 0.09, sun: 0xb8c8e8, sunI: 0.22, fillCol: 0x5a6a88, exp: 0.7 },
   { m: 1440, bg: 0x0b1020, fog: 0x0b1020, hemiSky: 0x4a5a78, hemiGnd: 0x1c1816, hemi: 0.28, fill: 0.08, sun: 0xc9d4ea, sunI: 0.22, fillCol: 0x6a7a98, exp: 0.68 },
 ];
 
