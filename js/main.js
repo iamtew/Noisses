@@ -320,6 +320,7 @@ function paintHud(now) {
   const fade = HUD_FADE_MS;
   const live = HUD_LOG_MS;
   while (hudLines.length > 1 && now - hudLines[0].born > die) hudLines.shift();
+  while (hud.firstChild && hud.firstChild.nodeType !== 1) hud.firstChild.remove();
   while (hud.childElementCount > hudLines.length) hud.lastChild.remove();
   hudLines.forEach((line, i) => {
     let el = hud.children[i];

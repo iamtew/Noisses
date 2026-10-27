@@ -45,6 +45,11 @@ body {
   text-align: right;
 }
 
+#hud span:last-child {
+  margin-top: 0.55rem;
+  font-size: 1.45rem;
+}
+
 #hud[hidden] {
   display: none;
 }

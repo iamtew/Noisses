@@ -122,7 +122,7 @@ export const MENU_HOLD = 0.55;
 export const MENU_SCROLL = 520;
 
 /** Trick HUD line stays this long, then fades (ms). */
-export const HUD_LOG_MS = 5000;
+export const HUD_LOG_MS = 3000;
 /** Fade window at the end of HUD_LOG_MS (ms). */
 export const HUD_FADE_MS = 800;
 
