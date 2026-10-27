@@ -189,7 +189,7 @@ export function orientFeet(model, regular) {
   const side = regular ? 1 : -1;
   model.frontFoot.rotation.y = yaw;
   model.backFoot.rotation.y = yaw;
-  // Local +Z flips with goofy yaw. Push the shoe away from the midline.
+  // Local +Z flips with switch yaw. Push the shoe away from the midline.
   const fz = Math.sign(model.frontFoot.position.z || 1) * IN * side;
   const bz = Math.sign(model.backFoot.position.z || -1) * IN * side;
   for (const child of model.frontFoot.children) child.position.z = fz;

@@ -315,6 +315,38 @@ body.clanker #sticks .pad:active {
   overflow: auto;
 }
 
+#pause [data-options-list] .row:not(.reset) {
+  grid-template-columns: 1.6rem 8rem auto;
+}
+
+#pause [data-trick-list] > .row:not(.reset) {
+  grid-template-columns: 7rem auto;
+  margin-top: 0;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+}
+
+#pause .trick-cat {
+  margin: 0.75rem 0 0.15rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a968e;
+}
+
+#pause .row.reset.trick-item {
+  grid-template-columns: 1fr auto;
+  margin-top: 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+#pause .trick-arrows {
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+  color: #c8c4bc;
+}
+
 #pause .trick-demo {
   padding-top: 0.2rem;
 }

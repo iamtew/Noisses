@@ -510,7 +510,7 @@ function poseOff(skater, model, input, board, dt, loco) {
   skater.gait += ((moving ? 1 : 0) - skater.gait) * (1 - Math.exp(-8 * dt));
 
   const swing = Math.cos(skater.step);
-  // Face is chest +X. Regular yaws that to root −X; goofy leaves it at +X.
+  // Face is chest +X. Regular yaws that to root −X; switch leaves it at +X.
   // Left arm is chest +Z, which regular carries to root −Z.
   const faceX = board.regular ? -1 : 1;
   const leftZ = faceX;
@@ -693,8 +693,8 @@ export function selfCheckSkater() {
   skater.chest.rotation.y = 0;
   skater.root.updateMatrixWorld(true);
   carryBoardWorld(skater, held, heldQ);
-  const bottomGoofy = new THREE.Vector3(0, -1, 0).applyQuaternion(heldQ);
-  if (!(bottomGoofy.z > 0.9)) throw new Error("goofy left is chest +Z");
+  const bottomSwitch = new THREE.Vector3(0, -1, 0).applyQuaternion(heldQ);
+  if (!(bottomSwitch.z > 0.9)) throw new Error("switch left is chest +Z");
   const palm = new THREE.Vector3();
   skater.hand.getWorldPosition(palm);
   const truck = TRUCK_LOCAL[0];

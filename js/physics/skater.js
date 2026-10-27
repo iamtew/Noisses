@@ -54,7 +54,7 @@ export function stepCarry(walker, dt) {
 
 /**
  * Root yaw so the face tracks the move. Same axes as on the board:
- * regular looks along root −X, goofy along root +X. The chest yaw does not change.
+ * regular looks along root −X, switch along root +X. The chest yaw does not change.
  */
 export function faceYaw(moveX, moveZ, regular) {
   if (regular) return Math.atan2(moveZ, -moveX);

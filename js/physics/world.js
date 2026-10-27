@@ -35,6 +35,7 @@ import {
   WHEEL_LOCAL,
   WHEEL_RADIUS,
 } from "../constants.js";
+import { grindFric, grindLabel, matchGrind, stickDir, updateRide } from "../tricks/catalog.js";
 import { detectPop, feetSplit, stepFlip, stepManual, wrapPi } from "../tricks/detector.js";
 
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -57,6 +58,8 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   const airborne = !board.grounded;
   const front = input.front || { x: 0, y: 0 };
   const back = input.back || { x: 0, y: 0 };
+  _forward.set(0, 0, 1).applyQuaternion(board.quat);
+  updateRide(board, _forward);
   // L2 left, R2 right. Was R2−L2 and air-only; that felt inverted and dead on the pad.
   const lean = (input.l2 || 0) - (input.r2 || 0);
   const turn = STEER_RATE * Math.min(speed, 2) + STEER_PIVOT;
@@ -71,7 +74,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   }
   const fell = stepManual(board, input, dt, !airborne, speed);
   if (fell) bail(board);
-  // Back foot down lifts the nose. Front foot down presses it. A nollie is that, inverted.
+  // Back 6 o'clock lifts the nose. Front 12 o'clock presses it.
   // Powerslide holds both ends, so the deck stays flat once the slide is locked.
   let pitchTarget = board.sliding ? 0 : stancePitch(front.y, back.y);
   if (board.manual === "tail") pitchTarget = -(MANUAL_PITCH + board.balance * 0.12);
@@ -83,6 +86,7 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   if (pop > 0) board.vel.y += pop / BOARD_MASS;
   // stepFlip clears trick on the ground. Put the pop name back so it survives into the air.
   const popped = pop > 0 ? board.trick : "";
+  const poppedRow = pop > 0 ? board.trickRow : null;
   if (airborne && !board.boned && front.y < -0.5 && back.y < -0.5) {
     board.vel.y += BONE_IMPULSE / BOARD_MASS;
     board.boned = true;
@@ -90,7 +94,11 @@ export function stepWorld(board, dt, input, floors, grinds = [], solids = []) {
   if (!airborne) board.boned = false;
 
   if (!board.grinding) stepFlip(input, board, dt, airborne);
-  if (popped) board.trick = popped;
+  if (popped) {
+    board.trick = popped;
+    board.trickRow = poppedRow;
+    board.spinApplied = false;
+  }
   _euler.set(board.pitch, board.yaw + board.shuv, board.roll + board.flip);
   board.quat.setFromEuler(_euler);
   _forward.set(0, 0, 1).applyQuaternion(board.quat);
@@ -214,13 +222,23 @@ function nearestTruckDist(board, grind) {
   return best;
 }
 
-function grindName(front, back, parallel) {
-  // Same axis as stancePitch: back foot down is tail, front foot down is nose.
-  const along = back.y - front.y;
-  if (parallel < 0.45) return front.x + back.x > 0 ? "lipslide" : "boardslide";
-  if (along > 0.4) return "5-0";
-  if (along < -0.4) return "nosegrind";
-  return "50-50";
+/** Invented: rail on the rider's right is frontside. */
+function grindSide(forward, pos) {
+  const dx = _railPt.x - pos.x;
+  const dz = _railPt.z - pos.z;
+  return dx * forward.z - dz * forward.x >= 0 ? "fs" : "bs";
+}
+
+function nameGrind(board, front, back) {
+  const g = board.grind;
+  if (!g) return "";
+  projectGrind(board.pos, g);
+  const parallel = Math.abs(_forward.dot(g.dir));
+  const side = grindSide(_forward, board.pos);
+  const row = matchGrind(stickDir(front.x, front.y), stickDir(back.x, back.y), side, parallel);
+  board.grindFric = grindFric(row);
+  board.grindSide = side;
+  return grindLabel(row, side);
 }
 
 function bumpGrindBody(board, grind) {
@@ -279,7 +297,7 @@ function tryLockGrind(board, grinds, front, back) {
     if (Math.abs(board.vel.dot(g.dir)) < GRIND_MIN_ALONG) continue;
     board.grinding = true;
     board.grind = g;
-    board.trick = grindName(front, back, Math.abs(_forward.dot(g.dir)));
+    board.trick = nameGrind(board, front, back);
     return;
   }
 }
@@ -303,8 +321,8 @@ function stepGrind(board, dt, front, back) {
   const along = board.vel.dot(g.dir);
   board.vel.copy(g.dir).multiplyScalar(along);
   board.vel.y = 0;
-  board.vel.multiplyScalar(Math.exp(-GRIND_FRICTION * dt));
-  board.trick = grindName(front, back, Math.abs(_forward.dot(g.dir)));
+  board.vel.multiplyScalar(Math.exp(-GRIND_FRICTION * (board.grindFric || 1) * dt));
+  board.trick = nameGrind(board, front, back);
 }
 
 function bail(board) {
@@ -317,6 +335,7 @@ function bail(board) {
   board.shuvRate = 0;
   board.caught = true;
   board.trick = "";
+  board.trickRow = null;
   board.grinding = false;
   board.grind = null;
   board.sliding = false;
@@ -327,11 +346,11 @@ function bail(board) {
 }
 
 /**
- * Nose-down pitch (rad) from the feet. Back foot down → negative (nose up).
- * Front foot down is the same pose mirrored, which is the nollie.
+ * Nose-down pitch (rad) from the feet. 12 o'clock = nose, 6 o'clock = tail.
+ * Back 6 lifts the nose. Front 12 drops it. Split 12+6 is flat.
  */
 export function stancePitch(frontY, backY) {
-  return (frontY - backY) * 0.5 * PITCH_MAX;
+  return (-frontY - backY) * 0.5 * PITCH_MAX;
 }
 
 /** Fails loud if gravity integration is broken. Fixed 9.81, not the slider. */
@@ -345,7 +364,7 @@ export function selfCheck() {
   }
   if (!(y < 0)) throw new Error("gravity self-check failed");
   const ollie = stancePitch(0, 0.8);
-  const nollie = stancePitch(0.8, 0);
+  const nollie = stancePitch(-0.8, 0);
   if (!(ollie < 0 && nollie === -ollie)) throw new Error("nollie pitch should invert the ollie");
-  if (stancePitch(0.8, 0.8) !== 0) throw new Error("even crouch should stay flat");
+  if (stancePitch(-0.8, 0.8) !== 0) throw new Error("front 12 and back 6 should stay flat");
 }

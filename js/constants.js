@@ -198,8 +198,8 @@ export const MANUAL_PITCH = 0.42;
 export const MANUAL_DRIFT = 0.65;
 export const MANUAL_CORRECT = 1.6;
 
-/** Hold the pose this long before the manual locks (s). */
-export const MANUAL_ENTER = 0.1;
+/** Hold the pose this long before the manual locks (s). Longer than a pop charge. */
+export const MANUAL_ENTER = 0.28;
 
 /** Charge stick Y (down = +) to load tail / nollie reverse. */
 export const TAIL_HOLD = 0.28;
@@ -267,6 +267,30 @@ export const CATCH_ANGLE = 0.6;
 
 /** Stick |Y| that counts as planted for a catch. */
 export const CATCH_STICK = 0.28;
+
+/** Stick magnitude below this is idle when snapping to 8 dirs. Under TAIL_HOLD so a crouch counts. */
+export const DIR_DEAD = 0.22;
+
+/** Max pose error (sum of two unit-vector distances) to still name a trick. */
+export const MATCH_MAX = 0.85;
+
+/** Need this much speed (m/s) before fakie/normal can flip. Idle keeps the last one. */
+export const FAKIE_SPEED = 0.45;
+
+/** Rolling this far tail-first (m/s along the nose) counts as fakie. */
+export const FAKIE_ALONG = 0.2;
+
+/** Pop impulse scale by charge band. Invented; high is the old ollie. */
+export const POP_SCALE = { high: 1, mid: 0.78, low: 0.58 };
+
+/** Grind friction multipliers by chart band. Blunts die shorter than 50-50s. */
+export const GRIND_FRIC_SCALE = { low: 0.7, mid: 1.2, hi: 2 };
+
+/** |board forward · rail| below this is a slide (board across). */
+export const GRIND_PARALLEL_SLIDE = 0.45;
+
+/** Even more across than a slide: blunt / noseblunt lock. */
+export const GRIND_PARALLEL_BLUNT = 0.22;
 
 /** Truck-to-rail distance that counts as contact (m). Not a magnet. */
 export const GRIND_LOCK = 0.13;
@@ -389,6 +413,36 @@ function loadTune() {
 }
 
 loadTune();
+
+const STANCE_KEY = "noisses-stance";
+let switched = false;
+
+function loadStance() {
+  try {
+    const raw = localStorage.getItem(STANCE_KEY);
+    if (raw === "switch") switched = true;
+    else switched = false;
+  } catch {
+    /* private window */
+  }
+}
+
+loadStance();
+
+/** Regular or Switch. Leftover `goofy` in storage is Regular. */
+export function getSwitched() {
+  return switched;
+}
+
+export function setSwitched(on, persist = true) {
+  switched = Boolean(on);
+  if (!persist) return;
+  try {
+    localStorage.setItem(STANCE_KEY, switched ? "switch" : "regular");
+  } catch {
+    /* private window */
+  }
+}
 
 const SKY_KEY = "noisses-sky";
 const skyClock = { minutes: CLOCK_DEFAULT_MIN, azimuth: SUN_AZIMUTH_DEFAULT, cycle: false };

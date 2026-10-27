@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createAudio, selfCheckAudio } from "./audio/engine.js";
-import { CAM_OFFSET_STOCK, FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, getTune, persistSkyClock, selfCheckSky, selfCheckTune, setTune } from "./constants.js";
+import { CAM_OFFSET_STOCK, FIXED_DT, HUD_FADE_MS, HUD_LOG_MS, MENU_HOLD, ORBIT_PITCH, ORBIT_PITCH_MAX, ORBIT_PITCH_MIN, ORBIT_YAW, RIDE_HEIGHT, SPAWN_HOLD, advanceSkyClock, getTune, persistSkyClock, selfCheckSky, selfCheckTune, setSwitched, setTune } from "./constants.js";
 import { CLANKER, bindClankerPads } from "./input/clanker.js";
 import {
   IDLE_INPUT,
@@ -19,9 +19,11 @@ import { selfCheckHowto } from "./ui/howto.js";
 import { bindOverlay, bindPause } from "./ui/overlay.js";
 import { bindSettings } from "./ui/settings.js";
 import { bindSticks } from "./ui/sticks.js";
+import { selfCheckCatalog, syncFeet } from "./tricks/catalog.js";
 import { selfCheckFlip, selfCheckManual, selfCheckPop, selfCheckSlide } from "./tricks/detector.js";
 
 selfCheck();
+selfCheckCatalog();
 selfCheckPop();
 selfCheckFlip();
 selfCheckManual();
@@ -71,6 +73,11 @@ const pause = bindPause(document.getElementById("pause"), {
   },
   onVolume(v) {
     sfx.setVolume(v);
+  },
+  onStance(switched) {
+    board.switched = switched;
+    setSwitched(switched);
+    syncFeet(board);
   },
   onPick(id) {
     if (id === "resume") pause.hide();
@@ -311,17 +318,38 @@ function hudKey(text) {
   return text;
 }
 
+function hudEvent(text) {
+  return (
+    text.includes(" · ") ||
+    text === "BAILED" ||
+    text.startsWith("ADVANCED") ||
+    text.startsWith("SET SPAWN") ||
+    text.startsWith("RESPAWN") ||
+    text === "SPAWN SET" ||
+    text === "RESPAWNED" ||
+    text === "GETTING OFF" ||
+    text === "GETTING ON" ||
+    text === "running" ||
+    text === "walking" ||
+    text === "loitering" ||
+    text === "LOW CAM" ||
+    text === "FOLLOW"
+  );
+}
+
 function paintHud(now) {
   const text = hudText();
-  if (text) {
+  const last = hudLines[hudLines.length - 1];
+  if (text && hudEvent(text)) {
     const key = hudKey(text);
-    const last = hudLines[hudLines.length - 1];
     if (last && last.key === key) {
       last.text = text;
       last.born = now;
     } else if (!last || last.text !== text) {
       hudLines.push({ text, key, born: now });
     }
+  } else if (text && !last) {
+    hudLines.push({ text, key: "STANCE", born: now });
   }
   const die = HUD_LOG_MS + HUD_FADE_MS;
   const fade = HUD_FADE_MS;
@@ -358,7 +386,8 @@ function hudText() {
   }
   if (camFlash > 0) return camMsg;
   if (board.bailed > 0) return "BAILED";
-  const stance = board.regular ? "regular" : "goofy";
+  const who = board.switched ? "switch" : "regular";
+  const ride = board.ride === "fakie" || board.ride === "nollie" ? ` · ${board.ride}` : "";
   const trick = board.grinding
     ? ` · ${board.trick} grind`
     : board.sliding
@@ -368,7 +397,7 @@ function hudText() {
         : board.trick && !board.grounded
           ? ` · ${board.trick}${board.caught ? " caught" : ""}`
           : "";
-  return `${stance}${trick}`;
+  return `${who}${ride}${trick}`;
 }
 
 function tick(now) {
@@ -497,7 +526,11 @@ function tick(now) {
         board.bailed = 1.2;
         sfx.bail();
       }
-      else if (board.grounded) board.regular = !board.regular;
+      else if (board.grounded) {
+        board.switched = !board.switched;
+        setSwitched(board.switched);
+        syncFeet(board);
+      }
     }
     board.circleLatch = input.circle;
     advanceSkyClock(frameDt);

@@ -9,18 +9,18 @@ import {
   MANUAL_SPEED,
   SLIDE_SPLIT,
   FLICK_SPEED,
-  FLICK_UP,
   FLICK_WINDOW,
   FLIP_DAMP,
   FLIP_SPIN,
   OLLIE_FLICK_GAIN,
   OLLIE_IMPULSE,
+  POP_SCALE,
   SCOOP_SPEED,
   SCOOP_WINDOW,
-  SCOOP_X,
   SHUV_SPIN,
-  TAIL_HOLD,
+  DIR_DEAD,
 } from "../constants.js";
+import { matchFlip, nosePop, stickDir, trickLabel } from "./catalog.js";
 
 function rememberFlick(board, input, dt) {
   if (input.frontYVel < FLICK_SPEED) board.flickFront = FLICK_WINDOW;
@@ -39,36 +39,70 @@ export function wrapPi(a) {
   return ((((a + Math.PI) % t) + t) % t) - Math.PI;
 }
 
+function frontScoopDir(front) {
+  if (Math.abs(front.x) >= DIR_DEAD) return front.x < 0 ? "W" : "E";
+  return stickDir(front.x, front.y);
+}
+
+function applyPopRow(board, row, input) {
+  board.popLatch = true;
+  board.trickRow = row;
+  board.trick = trickLabel(row);
+  board.spinApplied = false;
+  board.caught = !row.flip && !row.shuv;
+  const flick = Math.max(
+    -Math.min(input.frontYVel || 0, input.backYVel || 0),
+    -FLICK_SPEED,
+  );
+  return OLLIE_IMPULSE * (POP_SCALE[row.pop] || 1) + flick * OLLIE_FLICK_GAIN;
+}
+
 /**
- * Ollie: hold back stick down, flick front stick up.
- * Nollie: hold front stick down, flick back stick up.
- * Flick can land a fraction of a second before the stick finishes up.
+ * Regular/switch: hold back, add front. Nollie/fakie: hold front, add back.
+ * Kickflip is charge down + flick right. Latch until the flick foot recenters.
  */
 export function detectPop(input, board, dt = FIXED_DT) {
   rememberFlick(board, input, dt);
-  if (!board.grounded && !board.grinding) return 0;
+  const front = input.front || { x: 0, y: 0 };
+  const back = input.back || { x: 0, y: 0 };
+  const ride = board.ride || "normal";
+  const popNose = nosePop(ride);
+  const charge = popNose ? front : back;
+  const flick = popNose ? back : front;
+  const chargeDir = stickDir(charge.x, charge.y);
+  const flickDir = frontScoopDir(flick);
+  const chargeFlickVel = popNose
+    ? board.flickFront > 0 || board.flickFrontX > 0
+    : board.flickBack > 0 || board.flickBackX > 0;
+  const flickVel = popNose
+    ? board.flickBack > 0 || board.flickBackX > 0
+    : board.flickFront > 0 || board.flickFrontX > 0;
+  const added = flickDir !== "idle" && flickDir !== (board.prevFlickDir || "idle");
 
-  const ollie =
-    input.back.y > TAIL_HOLD &&
-    input.front.y < FLICK_UP &&
-    board.flickFront > 0;
-  const nollie =
-    input.front.y > TAIL_HOLD &&
-    input.back.y < FLICK_UP &&
-    board.flickBack > 0;
-
-  if ((ollie || nollie) && !board.popLatch) {
-    board.popLatch = true;
-    board.trick = ollie ? "ollie" : "nollie";
-    const flick = ollie
-      ? Math.max(-input.frontYVel, -FLICK_SPEED)
-      : Math.max(-input.backYVel, -FLICK_SPEED);
-    return OLLIE_IMPULSE + flick * OLLIE_FLICK_GAIN;
+  if (!board.grounded && !board.grinding) {
+    board.prevFlickDir = flickDir;
+    return 0;
   }
 
-  if (!ollie && !nollie && input.front.y > FLICK_UP && input.back.y > FLICK_UP) {
-    board.popLatch = false;
+  const charged = chargeDir !== "idle";
+  if (charged && (added || flickVel) && !board.popLatch) {
+    const row = matchFlip(ride, chargeDir, flickDir, chargeFlickVel, flickVel || added);
+    if (row) return applyPopRow(board, row, input);
   }
+
+  const latched = board.trickRow;
+  if (board.popLatch && charged && latched && !latched.flip && !latched.shuv) {
+    const next = matchFlip(ride, chargeDir, flickDir, chargeFlickVel, true);
+    if (next && (next.flip || next.shuv)) {
+      board.trickRow = next;
+      board.trick = trickLabel(next);
+      board.spinApplied = false;
+      board.caught = false;
+    }
+  }
+
+  if (flickDir === "idle") board.popLatch = false;
+  board.prevFlickDir = flickDir;
   return 0;
 }
 
@@ -78,49 +112,203 @@ export function selfCheckPop() {
     popLatch: false,
     flickFront: 0,
     flickBack: 0,
+    flickFrontX: 0,
+    flickBackX: 0,
+    ride: "normal",
+    prevFlickDir: "idle",
   };
   const miss = detectPop(
-    { back: { y: 0 }, front: { y: 0 }, frontYVel: 0, backYVel: 0 },
+    { back: { x: 0, y: 0 }, front: { x: 0, y: 0 }, frontYVel: 0, backYVel: 0, frontXVel: 0, backXVel: 0 },
     board,
   );
   if (miss !== 0) throw new Error("pop self-check: idle must not pop");
 
   const ollie = detectPop(
     {
-      back: { y: 0.8 },
-      front: { y: -0.6 },
+      back: { x: 0, y: 0.8 },
+      front: { x: 0, y: -0.8 },
       frontYVel: -12,
       backYVel: 0,
+      frontXVel: 0,
+      backXVel: 0,
     },
     board,
   );
-  if (!(ollie > OLLIE_IMPULSE)) throw new Error("pop self-check: ollie flick missed");
+  if (!(ollie > OLLIE_IMPULSE * 0.8) || board.trick !== "ollie") {
+    throw new Error("pop self-check: ollie flick missed");
+  }
 
   board.popLatch = false;
   board.flickFront = 0;
   board.flickBack = 0;
-  const nollie = detectPop(
+  board.flickFrontX = 0;
+  board.flickBackX = 0;
+  board.prevFlickDir = "idle";
+  board.ride = "normal";
+  const kick = detectPop(
     {
-      back: { y: -0.6 },
-      front: { y: 0.8 },
+      back: { x: 0, y: 0.8 },
+      front: { x: 0.85, y: 0 },
       frontYVel: 0,
-      backYVel: -12,
+      backYVel: 0,
+      frontXVel: 12,
+      backXVel: 0,
     },
     board,
   );
-  if (!(nollie > OLLIE_IMPULSE)) throw new Error("pop self-check: nollie flick missed");
+  if (!(kick > 0) || board.trick !== "kickflip") {
+    throw new Error("pop self-check: kickflip is back down + front right");
+  }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  const slow = detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: 0.85, y: 0 },
+      frontYVel: 0,
+      backYVel: 0,
+      frontXVel: 0,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (!(slow > 0) || board.trick !== "kickflip") {
+    throw new Error("pop self-check: slow analog right add must kickflip");
+  }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  const upRight = detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: 0.55, y: -0.7 },
+      frontYVel: -10,
+      backYVel: 0,
+      frontXVel: 8,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (!(upRight > 0) || board.trick !== "kickflip") {
+    throw new Error("pop self-check: up-right flick must kickflip, not ollie");
+  }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  const heel = detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: -0.85, y: 0 },
+      frontYVel: 0,
+      backYVel: 0,
+      frontXVel: -12,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (!(heel > 0) || board.trick !== "heelflip") {
+    throw new Error("pop self-check: heelflip is back down + front left");
+  }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: 0, y: -0.8 },
+      frontYVel: -12,
+      backYVel: 0,
+      frontXVel: 0,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (board.trick !== "ollie") throw new Error("pop self-check: upgrade needs an ollie first");
+  detectPop(
+    {
+      back: { x: 0, y: 0.8 },
+      front: { x: 0.7, y: -0.2 },
+      frontYVel: 0,
+      backYVel: 0,
+      frontXVel: 6,
+      backXVel: 0,
+    },
+    board,
+  );
+  if (board.trick !== "kickflip") {
+    throw new Error("pop self-check: grounded scoop-right must upgrade ollie");
+  }
+
+  board.popLatch = false;
+  board.prevFlickDir = "idle";
+  board.flickFront = 0;
+  board.flickFrontX = 0;
+  board.flickBack = 0;
+  board.flickBackX = 0;
+  board.ride = "nollie";
+  const nollieKick = detectPop(
+    {
+      back: { x: 0.85, y: 0 },
+      front: { x: 0, y: -0.8 },
+      frontYVel: 0,
+      backYVel: 0,
+      frontXVel: 0,
+      backXVel: 12,
+    },
+    board,
+  );
+  if (!(nollieKick > 0) || board.trick !== "nollie kickflip") {
+    throw new Error("pop self-check: nollie kickflip is front 12 o'clock + back right");
+  }
+}
+
+function nearTurns(angle, turns) {
+  if (!turns) return Math.abs(angle) < CATCH_ANGLE;
+  const need = turns * Math.PI * 2;
+  const err = Math.abs(Math.abs(angle) - need);
+  return Math.abs(angle) > need * 0.45 && err < CATCH_ANGLE;
+}
+
+function applySpin(board, row) {
+  if (!row) return;
+  if (row.flip) board.flipRate = row.flip * FLIP_SPIN;
+  if (row.shuv) board.shuvRate = row.shuv * SHUV_SPIN;
+  board.flipTurns = row.flipTurns || 0;
+  board.shuvTurns = row.shuvTurns || 0;
+  board.caught = !row.flip && !row.shuv;
+}
+
+/** Ollie already left the ground; a sideways add still counts as kick/heel. */
+function scoopUpgrade(input, board) {
+  const row = board.trickRow;
+  if (!row || row.flip || board.airTime > SCOOP_WINDOW * 1.8) return;
+  const flick = nosePop(row.ride) ? input.back || { x: 0, y: 0 } : input.front || { x: 0, y: 0 };
+  const dir = frontScoopDir(flick);
+  if (dir !== "W" && dir !== "E") return;
+  const next = matchFlip(row.ride, row.a, dir, false, true);
+  if (!next || !next.flip) return;
+  board.trickRow = next;
+  board.trick = trickLabel(next);
+  board.spinApplied = false;
+  board.caught = false;
 }
 
 /**
- * Front stick X scoop → kickflip (+) / heelflip (−).
- * Back stick X scoop → shuv. Catch is automatic near a full turn.
+ * Spin comes from the catalog row at pop. Catch is automatic near the target turns.
  */
 export function stepFlip(input, board, dt, airborne) {
-  const front = input.front || { x: 0, y: 0 };
-  const back = input.back || { x: 0, y: 0 };
-
   if (!airborne) {
     board.airTime = 0;
+    board.spinApplied = false;
     if (board.caught || (Math.abs(board.flip) < 0.05 && Math.abs(board.shuv) < 0.05)) {
       board.flip = 0;
       board.flipRate = 0;
@@ -128,26 +316,17 @@ export function stepFlip(input, board, dt, airborne) {
       board.shuvRate = 0;
       board.caught = true;
       board.trick = "";
+      board.trickRow = null;
     }
     return;
   }
 
   board.airTime += dt;
+  scoopUpgrade(input, board);
 
-  if (board.airTime < SCOOP_WINDOW) {
-    if (board.flipRate === 0 && board.flickFrontX > 0 && Math.abs(front.x) > SCOOP_X) {
-      board.flipRate = Math.sign(front.x) * FLIP_SPIN;
-      board.caught = false;
-      board.trick = front.x > 0 ? "kickflip" : "heelflip";
-    }
-    if (board.shuvRate === 0 && board.flickBackX > 0 && Math.abs(back.x) > SCOOP_X) {
-      // +X scoop swings the tail toward +X, which is negative yaw in YXZ.
-      board.shuvRate = -Math.sign(back.x) * SHUV_SPIN;
-      board.caught = false;
-      if (!board.trick) board.trick = "shuvit";
-      else if (board.trick === "kickflip") board.trick = "varial kickflip";
-      else if (board.trick === "heelflip") board.trick = "varial heelflip";
-    }
+  if (!board.spinApplied && board.trickRow) {
+    applySpin(board, board.trickRow);
+    board.spinApplied = true;
   }
 
   board.flip += board.flipRate * dt;
@@ -156,13 +335,17 @@ export function stepFlip(input, board, dt, airborne) {
   board.shuvRate *= Math.exp(-FLIP_DAMP * dt);
 
   if (!board.caught) {
-    const flipErr = wrapPi(board.flip);
-    const shuvErr = wrapPi(board.shuv);
-    // Must have actually spun. wrapPi(0) is 0, so a fresh scoop would snap otherwise.
-    const spun = Math.abs(board.flip) > 2 || Math.abs(board.shuv) > 2;
-    if (spun && Math.abs(flipErr) < CATCH_ANGLE && Math.abs(shuvErr) < CATCH_ANGLE) {
-      board.flip -= flipErr;
-      board.shuv -= shuvErr;
+    const ft = board.flipTurns || 0;
+    const st = board.shuvTurns || 0;
+    if (nearTurns(board.flip, ft) && nearTurns(board.shuv, st)) {
+      if (ft) {
+        const need = ft * Math.PI * 2 * Math.sign(board.flip || 1);
+        board.flip = need;
+      } else board.flip = 0;
+      if (st) {
+        const need = st * Math.PI * 2 * Math.sign(board.shuv || 1);
+        board.shuv = need;
+      } else board.shuv = 0;
       board.flipRate = 0;
       board.shuvRate = 0;
       board.caught = true;
@@ -171,8 +354,8 @@ export function stepFlip(input, board, dt, airborne) {
 }
 
 /**
- * Tail manual: back foot down, front foot centered.
- * Nose manual: the other way. Balance wanders; the heavy foot corrects it.
+ * Tail manual: back foot 6 o'clock, front centered.
+ * Nose manual: front foot 12 o'clock, back centered.
  * Returns true when the manual falls over.
  */
 export function stepManual(board, input, dt, grounded, speed) {
@@ -185,8 +368,10 @@ export function stepManual(board, input, dt, grounded, speed) {
     return false;
   }
 
-  const tail = back.y > MANUAL_HOLD && Math.abs(front.y) < MANUAL_CENTER;
-  const nose = front.y > MANUAL_HOLD && Math.abs(back.y) < MANUAL_CENTER;
+  const tail =
+    back.y > MANUAL_HOLD && Math.abs(front.y) < MANUAL_CENTER && Math.abs(front.x) < MANUAL_CENTER;
+  const nose =
+    front.y < -MANUAL_HOLD && Math.abs(back.y) < MANUAL_CENTER && Math.abs(back.x) < MANUAL_CENTER;
   const want = tail && !nose ? "tail" : nose && !tail ? "nose" : "";
 
   if (!board.manual) {
@@ -213,7 +398,7 @@ export function stepManual(board, input, dt, grounded, speed) {
   board.manual = want;
   board.trick = `${want} manual`;
   board.manualPhase = (board.manualPhase || 0) + dt;
-  const stick = want === "tail" ? back.y : front.y;
+  const stick = want === "tail" ? back.y : -front.y;
   const wander = Math.sin(board.manualPhase * 1.7) * MANUAL_DRIFT;
   board.balance += (wander - (stick - MANUAL_HOLD) * MANUAL_CORRECT) * dt;
   return Math.abs(board.balance) > 1;
@@ -248,10 +433,17 @@ export function selfCheckManual() {
   const tail = { front: { x: 0, y: 0 }, back: { x: 0, y: 0.8 } };
   stepManual(board, tail, MANUAL_ENTER, true, 3);
   if (board.manual !== "tail") throw new Error("manual self-check: tail did not lock");
+
+  board.manual = "";
+  board.manualCharge = 0;
+  board.balance = 0;
+  const nose = { front: { x: 0, y: -0.8 }, back: { x: 0, y: 0 } };
+  stepManual(board, nose, MANUAL_ENTER, true, 3);
+  if (board.manual !== "nose") throw new Error("manual self-check: nose did not lock at 12 o'clock");
 }
 
 export function selfCheckFlip() {
-  if (Math.abs(wrapPi(Math.PI * 2) ) > 1e-6) throw new Error("wrapPi full turn");
+  if (Math.abs(wrapPi(Math.PI * 2)) > 1e-6) throw new Error("wrapPi full turn");
   const board = {
     airTime: 0,
     flip: 0,
@@ -259,54 +451,16 @@ export function selfCheckFlip() {
     shuv: 0,
     shuvRate: 0,
     caught: true,
-    trick: "",
+    trick: "kickflip",
+    trickRow: matchFlip("normal", "S", "E", false, true),
+    spinApplied: false,
     flickFrontX: FLICK_WINDOW,
     flickBackX: 0,
   };
-  stepFlip(
-    { front: { x: 0.8, y: 0 }, back: { x: 0, y: 0 }, frontXVel: 8, backXVel: 0 },
-    board,
-    FIXED_DT,
-    true,
-  );
-  if (!(board.flipRate > 0) || board.trick !== "kickflip") {
-    throw new Error("flip self-check: kickflip scoop missed");
+  stepFlip({ front: { x: 0.8, y: 0 }, back: { x: 0, y: 0 } }, board, FIXED_DT, true);
+  if (!(board.flipRate < 0) || !board.spinApplied) {
+    throw new Error("flip self-check: kickflip spin missed");
   }
-
-  const shuv = {
-    airTime: 0,
-    flip: 0,
-    flipRate: 0,
-    shuv: 0,
-    shuvRate: 0,
-    caught: true,
-    trick: "",
-    flickFrontX: 0,
-    flickBackX: FLICK_WINDOW,
-  };
-  stepFlip(
-    { front: { x: 0, y: 0 }, back: { x: 0.8, y: 0 }, frontXVel: 0, backXVel: 8 },
-    shuv,
-    FIXED_DT,
-    true,
-  );
-  if (!(shuv.shuvRate < 0) || shuv.trick !== "shuvit") {
-    throw new Error("flip self-check: shuv spun away from the back foot");
-  }
-
-  const early = {
-    airTime: 1,
-    flip: 0.2,
-    flipRate: 20,
-    shuv: 0,
-    shuvRate: 0,
-    caught: false,
-    trick: "kickflip",
-    flickFrontX: 0,
-    flickBackX: 0,
-  };
-  stepFlip({ front: { x: 0.9, y: 0 }, back: { x: 0.9, y: 0 } }, early, FIXED_DT, true);
-  if (early.caught) throw new Error("flip self-check: catch ate the scoop");
 
   const late = {
     airTime: 1,
@@ -316,9 +470,13 @@ export function selfCheckFlip() {
     shuvRate: 0,
     caught: false,
     trick: "kickflip",
+    trickRow: board.trickRow,
+    spinApplied: true,
+    flipTurns: 1,
+    shuvTurns: 0,
     flickFrontX: 0,
     flickBackX: 0,
   };
-  stepFlip({ front: { x: 0.9, y: 0 }, back: { x: 0.9, y: 0 } }, late, FIXED_DT, true);
+  stepFlip({ front: { x: -0.9, y: 0 }, back: { x: 0, y: 0 } }, late, FIXED_DT, true);
   if (!late.caught) throw new Error("flip self-check: catch should be automatic");
 }

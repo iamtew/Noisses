@@ -5,6 +5,7 @@ import {
   TUNABLES,
   formatClock,
   formatTune,
+  getSwitched,
   getSkyClock,
   getTune,
   parseClock,
@@ -20,7 +21,7 @@ import {
   offsetHoodie,
   saveHoodie,
 } from "../scene/skaterModel.js";
-import { HOWTO_BODY, TRICKS, sampleTrick } from "./howto.js";
+import { HOWTO_BODY, KINDS, RIDES, listTricks, sampleTrick } from "./howto.js";
 import { iconHtml } from "./icons.js";
 import { bindSticks } from "./sticks.js";
 
@@ -32,7 +33,7 @@ const COPY = {
   },
   press: {
     title: "PRESS ANY BUTTON TO START",
-    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn     R1  low cam     ←→ cam side\nOptions  pause     hold Options  advanced\nEmbarcadero Plaza — face the bay\nFountain on your left · Ferry Building ahead, tower to the right\nTerrace toward the palms · octagon on the brick · kicker to the right\n○ stance on the board\n△ off / on the board     L3+R3 sticks\nOff the board: left stick walks, right stick looks, × jumps, ×× runs",
+    body: "□  left foot     ×  right foot     L2/R2  turn\nHold ↓  set spawn     hold ↑  respawn     R1  low cam     ←→ cam side\nOptions  pause     hold Options  advanced\nEmbarcadero Plaza — face the bay\nFountain on your left · Ferry Building ahead, tower to the right\nTerrace toward the palms · octagon on the brick · kicker to the right\n○ switch on the board\n△ off / on the board     L3+R3 sticks\nOff the board: left stick walks, right stick looks, × jumps, ×× runs",
   },
 };
 
@@ -63,6 +64,7 @@ const ITEMS = [
 ];
 
 const OPTION_ITEMS = [
+  { id: "stance", label: "Stance", icon: "device-gamepad-2" },
   { id: "hoodie", label: "Hoodie", icon: "shirt" },
   { id: "daynight", label: "Day / Night", icon: "sun-moon" },
   { id: "audio", label: "Audio", icon: "volume" },
@@ -83,12 +85,12 @@ const TITLES = {
 
 const HINTS = {
   root: "↑↓ select · × confirm · ○ or Options closes · hold Options for advanced",
-  options: "↑↓ select · × open · ○ back",
+  options: "↑↓ select · × open · ←→ stance · ○ back",
   hoodie: "↑↓ select · ←→ pattern or hue · ○ back",
   daynight: "↑↓ select · ←→ cycle, time, or sun angle · ○ back",
   audio: "↑↓ select · ←→ volume · × restore · ○ back",
   howto: "↑↓ select · sticks scroll · × open · ○ back",
-  tricks: "↑↓ pick a trick · sticks scroll · ○ back · paths are Regular (Goofy swaps the sticks)",
+  tricks: "↑↓ pick · ←→ stance or flips/grinds · sticks scroll · ○ back",
 };
 
 function patternLabel(id) {
@@ -151,6 +153,8 @@ export function bindPause(root, hooks) {
   let audioIndex = 0;
   let howtoIndex = 0;
   let trickIndex = 0;
+  let rideFilter = 0;
+  let kindFilter = 0;
   let look = loadHoodie();
   let autoB = true;
   let syncing = false;
@@ -177,8 +181,13 @@ export function bindPause(root, hooks) {
   const optionBtns = OPTION_ITEMS.map((item, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "row reset";
-    btn.innerHTML = `${iconHtml(item.icon)}<span>${item.label}</span>`;
+    if (item.id === "stance") {
+      btn.className = "row";
+      btn.innerHTML = `${iconHtml(item.icon)}<span class="name">${item.label}</span><span data-val></span>`;
+    } else {
+      btn.className = "row reset";
+      btn.innerHTML = `${iconHtml(item.icon)}<span>${item.label}</span>`;
+    }
     btn.addEventListener("pointerdown", () => {
       optionIndex = i;
       paint();
@@ -285,26 +294,76 @@ export function bindPause(root, hooks) {
     howtoBtns.push(btn);
   }
 
-  const trickBtns = TRICKS.map((trick, i) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "row reset";
-    btn.textContent = trick.name;
-    btn.addEventListener("pointerdown", () => {
-      trickIndex = i;
-      demoT = 0;
-      demo.reset();
-      paint();
-    });
-    trickList.appendChild(btn);
-    return btn;
+  function currentTricks() {
+    return listTricks(RIDES[rideFilter], KINDS[kindFilter]);
+  }
+
+  function trickCount() {
+    return 2 + currentTricks().length + 1;
+  }
+
+  const rideBtn = document.createElement("button");
+  rideBtn.type = "button";
+  rideBtn.className = "row";
+  rideBtn.innerHTML = `<span class="name">Ride</span><span data-val></span>`;
+  rideBtn.addEventListener("pointerdown", () => {
+    trickIndex = 0;
+    rideFilter = (rideFilter + 1) % RIDES.length;
+    rebuildTricks();
+    demoT = 0;
+    demo.reset();
+    paint();
   });
+  const kindBtn = document.createElement("button");
+  kindBtn.type = "button";
+  kindBtn.className = "row";
+  kindBtn.innerHTML = `<span class="name">Kind</span><span data-val></span>`;
+  kindBtn.addEventListener("pointerdown", () => {
+    trickIndex = 1;
+    kindFilter = (kindFilter + 1) % KINDS.length;
+    rebuildTricks();
+    demoT = 0;
+    demo.reset();
+    paint();
+  });
+  const trickRows = document.createElement("div");
+  trickRows.className = "trick-rows";
   const trickBack = document.createElement("button");
   trickBack.type = "button";
   trickBack.className = "row reset";
   trickBack.innerHTML = `${iconHtml("logout")}<span>Back</span>`;
   trickBack.addEventListener("pointerdown", () => go("howto"));
-  trickList.appendChild(trickBack);
+  trickList.append(rideBtn, kindBtn, trickRows, trickBack);
+
+  let trickBtns = [];
+  function rebuildTricks() {
+    const rows = currentTricks();
+    trickRows.replaceChildren();
+    trickBtns = [];
+    let lastCat = "";
+    rows.forEach((trick, i) => {
+      if (trick.cat && trick.cat !== lastCat) {
+        const h = document.createElement("p");
+        h.className = "trick-cat";
+        h.textContent = trick.cat;
+        trickRows.appendChild(h);
+        lastCat = trick.cat;
+      }
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "row reset trick-item";
+      btn.innerHTML = `<span>${trick.name}</span><span class="trick-arrows">${trick.arrows || ""}</span>`;
+      btn.addEventListener("pointerdown", () => {
+        trickIndex = i + 2;
+        demoT = 0;
+        demo.reset();
+        paint();
+      });
+      trickRows.appendChild(btn);
+      trickBtns.push(btn);
+    });
+  }
+  rebuildTricks();
 
   pickerA.on("color:change", (color) => {
     if (syncing || !ready) return;
@@ -344,8 +403,14 @@ export function bindPause(root, hooks) {
     paint();
   }
 
+  function toggleStance() {
+    hooks.onStance(!getSwitched());
+    paint();
+  }
+
   function pickOption(id) {
-    if (id === "hoodie") go("hoodie");
+    if (id === "stance") toggleStance();
+    else if (id === "hoodie") go("hoodie");
     else if (id === "daynight") go("daynight");
     else if (id === "audio") go("audio");
     else if (id === "advanced") hooks.onPick("advanced");
@@ -371,6 +436,8 @@ export function bindPause(root, hooks) {
     optionBtns.forEach((btn, i) =>
       btn.classList.toggle("on", open && screen === "options" && i === optionIndex),
     );
+    const stanceVal = optionBtns[0].querySelector("[data-val]");
+    if (stanceVal) stanceVal.textContent = getSwitched() ? "Switch" : "Regular";
 
     patternBtn.querySelector("[data-val]").textContent = patternLabel(look.pattern);
     const rows = hoodieRows();
@@ -404,18 +471,30 @@ export function bindPause(root, hooks) {
       btn.classList.toggle("on", open && screen === "howto" && i === howtoIndex),
     );
 
-    const trickN = TRICKS.length + 1;
+    const trickRowsData = currentTricks();
+    const trickN = trickCount();
     if (trickIndex >= trickN) trickIndex = trickN - 1;
+    rideBtn.querySelector("[data-val]").textContent = RIDES[rideFilter];
+    kindBtn.querySelector("[data-val]").textContent = KINDS[kindFilter];
+    rideBtn.classList.toggle("on", open && screen === "tricks" && trickIndex === 0);
+    kindBtn.classList.toggle("on", open && screen === "tricks" && trickIndex === 1);
     trickBtns.forEach((btn, i) =>
-      btn.classList.toggle("on", open && screen === "tricks" && i === trickIndex),
+      btn.classList.toggle("on", open && screen === "tricks" && i === trickIndex - 2),
     );
-    trickBack.classList.toggle("on", open && screen === "tricks" && trickIndex === TRICKS.length);
+    trickBack.classList.toggle("on", open && screen === "tricks" && trickIndex === trickN - 1);
     if (open && screen === "tricks") {
-      const row = trickIndex < TRICKS.length ? trickBtns[trickIndex] : trickBack;
+      const row =
+        trickIndex === 0
+          ? rideBtn
+          : trickIndex === 1
+            ? kindBtn
+            : trickIndex < trickN - 1
+              ? trickBtns[trickIndex - 2]
+              : trickBack;
       row.scrollIntoView({ block: "nearest" });
     }
-    const trick = TRICKS[Math.min(trickIndex, TRICKS.length - 1)];
-    trickBlurb.textContent = trick.blurb;
+    const trick = trickRowsData[Math.max(0, Math.min(trickIndex - 2, trickRowsData.length - 1))];
+    trickBlurb.textContent = trick ? trick.blurb : "";
     if (!(open && screen === "tricks")) {
       demo.set({ lx: 0, ly: 0, rx: 0, ry: 0 }, true, false);
     }
@@ -475,9 +554,9 @@ export function bindPause(root, hooks) {
       } else if (screen === "howto") {
         howtoIndex = (howtoIndex + dir + howtoBtns.length) % howtoBtns.length;
       } else {
-        const n = TRICKS.length + 1;
+        const n = trickCount();
         const next = (trickIndex + dir + n) % n;
-        if (next !== trickIndex && next < TRICKS.length) {
+        if (next !== trickIndex && next >= 2 && next < n - 1) {
           demoT = 0;
           demo.reset();
         }
@@ -486,6 +565,19 @@ export function bindPause(root, hooks) {
       paint();
     },
     nudge(dir) {
+      if (screen === "options" && optionIndex === 0) {
+        toggleStance();
+        return;
+      }
+      if (screen === "tricks" && trickIndex < 2) {
+        if (trickIndex === 0) rideFilter = (rideFilter + (dir > 0 ? 1 : RIDES.length - 1)) % RIDES.length;
+        else kindFilter = (kindFilter + (dir > 0 ? 1 : KINDS.length - 1)) % KINDS.length;
+        rebuildTricks();
+        demoT = 0;
+        demo.reset();
+        paint();
+        return;
+      }
       if (screen === "hoodie") {
         const row = hoodieRows()[hoodieIndex];
         if (row === patternBtn) cyclePattern(dir > 0 ? 1 : -1);
@@ -529,7 +621,14 @@ export function bindPause(root, hooks) {
       } else if (screen === "howto") {
         if (howtoIndex === 0) go("tricks");
         else go("root");
-      } else if (trickIndex === TRICKS.length) go("howto");
+      } else if (trickIndex === 0 || trickIndex === 1) {
+        if (trickIndex === 0) rideFilter = (rideFilter + 1) % RIDES.length;
+        else kindFilter = (kindFilter + 1) % KINDS.length;
+        rebuildTricks();
+        demoT = 0;
+        demo.reset();
+        paint();
+      } else if (trickIndex === trickCount() - 1) go("howto");
     },
     tick(dt, ly = 0, lx = 0) {
       if (!open) return;
@@ -544,12 +643,14 @@ export function bindPause(root, hooks) {
         pane.scrollTop += ly * MENU_SCROLL * dt;
       }
       if (screen !== "tricks") return;
-      if (trickIndex >= TRICKS.length) {
+      const rows = currentTricks();
+      const item = trickIndex - 2;
+      if (item < 0 || item >= rows.length) {
         demo.set({ lx: 0, ly: 0, rx: 0, ry: 0 }, true, true);
         return;
       }
       demoT += dt;
-      demo.set(sampleTrick(TRICKS[trickIndex].keys, demoT), true, true);
+      demo.set(sampleTrick(rows[item].keys, demoT), true, true);
     },
     openHoodie() {
       go("hoodie");

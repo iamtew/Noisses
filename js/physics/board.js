@@ -1,8 +1,10 @@
 import * as THREE from "three";
+import { getSwitched } from "../constants.js";
+import { syncFeet } from "../tricks/catalog.js";
 
 export function createBoardState() {
   const pos = new THREE.Vector3(0, 0.4, 0);
-  return {
+  const board = {
     pos,
     prevPos: pos.clone(),
     quat: new THREE.Quaternion(),
@@ -19,6 +21,9 @@ export function createBoardState() {
     flickBack: 0,
     triangleLatch: false,
     circleLatch: false,
+    switched: getSwitched(),
+    fakie: false,
+    ride: "normal",
     regular: true,
     wasGrounded: true,
     boned: false,
@@ -30,6 +35,13 @@ export function createBoardState() {
     shuvRate: 0,
     caught: true,
     trick: "",
+    trickRow: null,
+    spinApplied: false,
+    flipTurns: 0,
+    shuvTurns: 0,
+    prevFlickDir: "idle",
+    grindFric: 1,
+    grindSide: "fs",
     flickFrontX: 0,
     flickBackX: 0,
     grinding: false,
@@ -41,6 +53,8 @@ export function createBoardState() {
     manualCharge: 0,
     wheelSpin: 0,
   };
+  syncFeet(board);
+  return board;
 }
 
 /** Drop onto a spawn. Clears motion and trick state. */
@@ -67,10 +81,14 @@ export function applySpawn(board, spawn) {
   board.manualCharge = 0;
   board.caught = true;
   board.trick = "";
+  board.trickRow = null;
+  board.spinApplied = false;
   board.popLatch = false;
+  board.fakie = false;
   board.bailed = 0;
   board.airTime = 0;
   board.boned = false;
+  syncFeet(board);
 }
 
 export function poseAt(board, alpha, outPos, outQuat) {

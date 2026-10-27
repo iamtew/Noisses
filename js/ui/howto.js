@@ -1,17 +1,23 @@
-/** In-game how-to. Regular: left stick is the front foot. */
+/** In-game how-to. Regular: left foot on the nose. Switch: right foot on the nose. */
+
+import { dirArrow, dirStick, flipsFor, grindDemos, nosePop } from "../tricks/catalog.js";
 
 export const HOWTO_BODY =
   "This is dual-stick foot control. Keyboard may watch. It may not skate.\n\n" +
-  "Regular (default): left stick = front foot, right stick = back foot. ○ on the ground swaps to Goofy, which flips that.\n\n" +
+  "Regular: left foot on the nose, right on the tail. Switch: the other way. Pause → Options Stance, or ○ on the ground, flips Regular ↔ Switch. It sticks.\n\n" +
+  "Regular and switch pop with the back foot. Nollie and fakie pop with the front foot. Rolling tail-first is fakie (it notices itself). Switch plus fakie is nollie.\n\n" +
   "□ push left foot. × push right foot. Once per press, on the ground.\n" +
-  "Stick Y is weight. Back foot down lifts the nose. Front foot down is the nollie crouch.\n" +
+  "Stick Y is weight. Down on a stick is toward the tail. Up is toward the nose.\n" +
   "L2 / R2 turn. R1 low cam. ← backside · → frontside cam. Hold D-pad down to plant a spawn. Hold up to come back.\n\n" +
-  "Ollie: hold the back stick down, flick the front stick up. Catch is automatic near a full turn.\n" +
+  "Ollie: hold the back stick down, flick the front stick up. Kickflip: hold back down, flick front right. Heelflip is front left. Nollie is that, front foot first. Catch is automatic near a full turn.\n" +
   "Grind the lip, not the magnet. Options pauses. Hold Options for the nerd sliders.\n" +
-  "Pause → Options is hoodie, day/night, audio, and those sliders. Time scale lives in advanced.\n" +
+  "Pause → Options is hoodie, day/night, audio, Regular/Switch, and those sliders. Time scale lives in advanced.\n" +
   "△ steps off the board. It lives in the left hand, graphic out, truck in the fist. △ again gets back on.\n" +
   "Off the board the left stick walks, the right stick swings the camera, × jumps, and ×× runs.\n" +
   "L3+R3 together paints the sticks: left red, right purple.";
+
+export const RIDES = ["normal", "fakie", "switch", "nollie"];
+export const KINDS = ["flips", "grinds"];
 
 function k(t, lx, ly, rx, ry) {
   return { t, l: [lx, ly], r: [rx, ry] };
@@ -19,61 +25,43 @@ function k(t, lx, ly, rx, ry) {
 
 const REST = [k(0, 0, 0, 0, 0), k(0.12, 0, 0, 0, 0)];
 
-function ollieThen(extra, end = 1.35) {
+function pretty(name) {
+  return name.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
+function holdThenFlick(a, b, ride) {
+  const charge = dirStick(a);
+  const flick = dirStick(b);
+  const chargeLeft = ride === "nollie" || ride === "switch";
+  if (chargeLeft) {
+    return [
+      ...REST,
+      k(0.22, charge.x, charge.y, 0, 0),
+      k(0.5, charge.x, charge.y, 0, 0),
+      k(0.62, charge.x, charge.y * 0.9, flick.x, flick.y),
+      k(1.15, 0, 0, 0, 0),
+    ];
+  }
   return [
     ...REST,
-    k(0.2, 0, 0, 0, 0.78),
-    k(0.48, 0, 0, 0, 0.78),
-    k(0.56, 0, -0.82, 0, 0.7),
-    ...extra,
-    k(end, 0, 0, 0, 0),
+    k(0.22, 0, 0, charge.x, charge.y),
+    k(0.5, 0, 0, charge.x, charge.y),
+    k(0.62, flick.x, flick.y, charge.x, charge.y * 0.9),
+    k(1.15, 0, 0, 0, 0),
   ];
 }
 
-export const TRICKS = [
-  {
-    name: "Ollie",
-    blurb: "Hold back foot down, flick front foot up. Regular: R down, L flick up.",
-    keys: ollieThen([], 1.15),
-  },
-  {
-    name: "Nollie",
-    blurb: "The other way: hold front foot down, flick back foot up. Regular: L down, R flick up.",
-    keys: [
-      ...REST,
-      k(0.2, 0, 0.78, 0, 0),
-      k(0.48, 0, 0.78, 0, 0),
-      k(0.56, 0, 0.7, 0, -0.82),
-      k(1.15, 0, 0, 0, 0),
-    ],
-  },
-  {
-    name: "Kickflip",
-    blurb: "Ollie, then scoop the front stick right. Catch snaps itself near a full flip.",
-    keys: ollieThen([k(0.7, 0.82, -0.15, 0, 0.35), k(0.95, 0.15, 0, 0, 0.1)], 1.35),
-  },
-  {
-    name: "Heelflip",
-    blurb: "Ollie, scoop the front stick left. Catch is automatic near a full flip.",
-    keys: ollieThen([k(0.7, -0.82, -0.15, 0, 0.35), k(0.95, -0.15, 0, 0, 0.1)], 1.35),
-  },
-  {
-    name: "Shuvit",
-    blurb: "Ollie, scoop the back stick left or right. The tail follows that scoop.",
-    keys: ollieThen([k(0.7, 0, -0.1, 0.82, 0.2), k(0.95, 0, 0, 0.15, 0)], 1.35),
-  },
-  {
-    name: "Varial kickflip",
-    blurb: "Kickflip scoop plus a shuv on the back foot in the same window.",
-    keys: ollieThen([k(0.68, 0.82, -0.12, 0.82, 0.22), k(0.95, 0.2, 0, 0.2, 0)], 1.4),
-  },
-  {
-    name: "Varial heelflip",
-    blurb: "Heelflip scoop plus a shuv. Same pop window. Catch is still automatic.",
-    keys: ollieThen([k(0.68, -0.82, -0.12, -0.82, 0.22), k(0.95, -0.2, 0, -0.2, 0)], 1.4),
-  },
+function bothHold(frontDir, backDir) {
+  const f = dirStick(frontDir);
+  const b = dirStick(backDir);
+  return [...REST, k(0.35, f.x, f.y, b.x, b.y), k(1.1, f.x, f.y, b.x, b.y), k(1.3, 0, 0, 0, 0)];
+}
+
+const EXTRA_FLIP = [
   {
     name: "Catch",
+    cat: "Air",
+    arrows: "",
     blurb: "No stick dump. When the flip or shuv is close to a full turn, it snaps level by itself.",
     keys: [
       k(0, 0.7, -0.2, 0.65, 0.2),
@@ -82,8 +70,13 @@ export const TRICKS = [
       k(1.05, 0, 0, 0, 0),
     ],
   },
+];
+
+const EXTRA_GROUND = [
   {
     name: "Tail manual",
+    cat: "Ground",
+    arrows: "",
     blurb: "Rolling: back foot down, front foot near center. Wiggle the heavy foot or eat pavement.",
     keys: [
       ...REST,
@@ -95,66 +88,64 @@ export const TRICKS = [
   },
   {
     name: "Nose manual",
-    blurb: "Front foot down, back foot near center. Same balance game, other end of the plank.",
+    cat: "Ground",
+    arrows: "",
+    blurb: "Front foot 12 o'clock, back foot near center. Same balance game, other end of the plank.",
     keys: [
       ...REST,
-      k(0.25, 0, 0.72, 0, 0),
-      k(0.7, 0, 0.62, 0, 0.08),
-      k(1.05, 0, 0.78, 0, -0.06),
-      k(1.4, 0, 0.7, 0, 0),
+      k(0.25, 0, -0.72, 0, 0),
+      k(0.7, 0, -0.62, 0, 0.08),
+      k(1.05, 0, -0.78, 0, -0.06),
+      k(1.4, 0, -0.7, 0, 0),
     ],
   },
   {
     name: "Powerslide",
+    cat: "Ground",
+    arrows: "",
     blurb: "One foot toward the nose, the other toward the tail. Speed leaves. The board pivots.",
     keys: [
       ...REST,
-      k(0.3, 0, 0.7, 0, -0.7),
-      k(1.1, 0, 0.7, 0, -0.7),
+      k(0.3, 0, -0.7, 0, 0.7),
+      k(1.1, 0, -0.7, 0, 0.7),
       k(1.35, 0, 0, 0, 0),
     ],
   },
-  {
-    name: "50-50",
-    blurb: "Lock a lip with both trucks. Feet level. No magnet: miss the edge and you miss the grind.",
-    keys: [
-      ...REST,
-      k(0.35, 0, 0.08, 0, 0.08),
-      k(1.1, 0, 0.08, 0, 0.08),
-      k(1.3, 0, 0, 0, 0),
-    ],
-  },
-  {
-    name: "5-0",
-    blurb: "On the lip, back foot down. Front stays calmer. Pop or ride off to leave.",
-    keys: [
-      ...REST,
-      k(0.35, 0, 0.05, 0, 0.72),
-      k(1.1, 0, 0.05, 0, 0.72),
-      k(1.3, 0, 0, 0, 0),
-    ],
-  },
-  {
-    name: "Nosegrind",
-    blurb: "On the lip, front foot down. Mirror of a 5-0.",
-    keys: [
-      ...REST,
-      k(0.35, 0, 0.72, 0, 0.05),
-      k(1.1, 0, 0.72, 0, 0.05),
-      k(1.3, 0, 0, 0, 0),
-    ],
-  },
-  {
-    name: "Boardslide / lipslide",
-    blurb: "On the lip, both feet sideways. Combined stick X picks boardslide vs lipslide.",
-    keys: [
-      ...REST,
-      k(0.35, 0.7, 0.05, 0.7, 0.05),
-      k(1.1, 0.7, 0.05, 0.7, 0.05),
-      k(1.3, 0, 0, 0, 0),
-    ],
-  },
 ];
+
+const POP_CAT = { high: "High pop", mid: "Mid pop", low: "Low pop" };
+const FRIC_CAT = { low: "Low friction", mid: "Mid friction", hi: "Hi friction" };
+
+function flipBlurb(row) {
+  const charge = nosePop(row.ride) ? "front" : "back";
+  const flick = nosePop(row.ride) ? "back" : "front";
+  return `Hold ${charge} ${dirArrow(row.a)}, add ${flick} ${dirArrow(row.b)}. ${row.pop} pop. Catch still snaps itself.`;
+}
+
+function grindBlurb(row) {
+  return `${pretty(row.name)} on the lip. Front ${dirArrow(row.front)}, back ${dirArrow(row.back)}. No magnet.`;
+}
+
+export function listTricks(ride, kind) {
+  if (kind === "grinds") {
+    const rows = grindDemos().map((row) => ({
+      name: pretty(row.name),
+      cat: FRIC_CAT[row.friction],
+      arrows: `${dirArrow(row.front)}  ${dirArrow(row.back)}`,
+      blurb: grindBlurb(row),
+      keys: bothHold(row.front, row.back),
+    }));
+    return [...rows, ...EXTRA_GROUND];
+  }
+  const rows = flipsFor(ride).map((row) => ({
+    name: pretty(row.name),
+    cat: POP_CAT[row.pop],
+    arrows: `${dirArrow(row.a)}  ${dirArrow(row.b)}`,
+    blurb: flipBlurb(row),
+    keys: holdThenFlick(row.a, row.b, row.ride),
+  }));
+  return [...rows, ...EXTRA_FLIP];
+}
 
 function lerp(a, b, u) {
   return a + (b - a) * u;
@@ -179,8 +170,15 @@ export function sampleTrick(keys, time) {
 }
 
 export function selfCheckHowto() {
-  const s = sampleTrick(TRICKS[0].keys, 0);
+  const list = listTricks("normal", "flips");
+  if (list[0].name !== "Ollie") throw new Error("howto self-check: ollie first");
+  const s = sampleTrick(list[0].keys, 0);
   if (s.lx !== 0 || s.ly !== 0) throw new Error("howto self-check: ollie start");
-  const mid = sampleTrick(TRICKS[0].keys, 0.5);
+  const mid = sampleTrick(list[0].keys, 0.5);
   if (!(mid.ry > 0.4)) throw new Error("howto self-check: ollie tail");
+  const kick = list.find((r) => r.name === "Kickflip");
+  if (!kick || !kick.arrows.includes("→")) throw new Error("howto self-check: kickflip front right");
+  const nollie = listTricks("nollie", "flips");
+  const nollieOllie = sampleTrick(nollie[0].keys, 0.5);
+  if (!(nollieOllie.ly < -0.4)) throw new Error("howto self-check: nollie charges left pad at 12 o'clock");
 }
